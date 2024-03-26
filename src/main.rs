@@ -1,19 +1,28 @@
-use std::env;
-use std::time::Duration;
+use http::Request;
+use k8s_openapi::api::core::v1::Node;
+use kube::{api::ListParams, Api, ResourceExt};
 use reqwest::Client;
 use serde_json::json;
-use http::Request;
+use std::env;
+use std::time::Duration;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
-    let name = "minikube";
-    let url = format!("/api/v1/nodes/{}/proxy/stats/summary", name);
 
-    let kube_request = Request::get(url).body(Default::default())?;
-    let kube_response = kube_client.request::<serde_json::Value>(kube_request).await?;
+    let api: Api<Node> = Api::all(kube_client.clone());
+    let nodes = api.list(&ListParams::default()).await?;
+
+    for node in nodes {
+        let name = node.name_any();
+        let url = format!("/api/v1/nodes/{}/proxy/stats/summary", name);
+
+        let kube_request = Request::get(url).body(Default::default())?;
+        let kube_response = kube_client
+            .request::<serde_json::Value>(kube_request)
+            .await?;
 
         let json = json!([
             {
@@ -145,16 +154,17 @@ async fn main() -> Result<(), Error> {
         ])
         .to_string();
 
-    let endpoint = env::var("ENDPOINT").unwrap_or("unknown".to_string());
-    let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+        let endpoint = env::var("ENDPOINT").unwrap_or("unknown".to_string());
+        let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
-    let appsignal_response = reqwest_client
-        .post(&endpoint)
-        .body(json.as_str().to_owned())
-        .send()
-        .await?;
+        let appsignal_response = reqwest_client
+            .post(&endpoint)
+            .body(json.as_str().to_owned())
+            .send()
+            .await?;
 
-    println!("Done: {:?}", appsignal_response);
+        println!("Done: {:?}", appsignal_response);
+    }
 
     Ok(())
 }
