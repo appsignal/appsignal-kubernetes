@@ -11,3 +11,4 @@ reqwest = "0.12.2"
 serde_json = "1.0.115"
 kube = { version = "0.89.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.21.1", features = ["latest"] }
+http = "1.0"

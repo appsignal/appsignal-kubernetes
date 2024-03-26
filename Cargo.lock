@@ -64,6 +64,7 @@ dependencies = [
 name = "appsignal-kubernetes"
 version = "0.1.0"
 dependencies = [
+ "http",
  "k8s-openapi",
  "kube",
  "reqwest",
