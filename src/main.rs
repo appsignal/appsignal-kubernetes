@@ -10,8 +10,14 @@ type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let kube_client = kube::Client::try_default().await?;
+    loop {
+        run().await.ok();
+        tokio::time::sleep(Duration::from_secs(60)).await;
+    }
+}
 
+async fn run() -> Result<(), Error> {
+    let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
 
