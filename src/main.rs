@@ -55,6 +55,7 @@ async fn run() -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
+    let mut out = Vec::new();
 
     for node in nodes {
         let name = node.name_any();
@@ -64,8 +65,6 @@ async fn run() -> Result<(), Error> {
         let kube_response = kube_client
             .request::<serde_json::Value>(kube_request)
             .await?;
-
-        let mut out = Vec::new();
 
         for (metric_name, metric_value) in [
             // use .get instead of direct access
@@ -153,20 +152,20 @@ async fn run() -> Result<(), Error> {
         ] {
             out.push(AppsignalMetric::new(metric_name, &name, metric_value));
         }
-
-        let json = serde_json::to_string(&out).expect("Could not serialize JSON");
-
-        let endpoint = env::var("ENDPOINT").unwrap_or("unknown".to_string());
-        let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
-
-        let appsignal_response = reqwest_client
-            .post(&endpoint)
-            .body(json.to_owned())
-            .send()
-            .await?;
-
-        println!("Done: {:?}", appsignal_response);
     }
+
+    let json = serde_json::to_string(&out).expect("Could not serialize JSON");
+
+    let endpoint = env::var("ENDPOINT").unwrap_or("unknown".to_string());
+    let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+
+    let appsignal_response = reqwest_client
+        .post(&endpoint)
+        .body(json.to_owned())
+        .send()
+        .await?;
+
+    println!("Done: {:?}", appsignal_response);
 
     Ok(())
 }
