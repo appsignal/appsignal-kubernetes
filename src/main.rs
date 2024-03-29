@@ -1,7 +1,7 @@
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
-use reqwest::Client;
+use reqwest::{Client, Url};
 use serde::Serialize;
 use serde_json::value::Value;
 use std::collections::HashMap;
@@ -71,11 +71,16 @@ async fn run() -> Result<(), Error> {
 
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
 
-    let endpoint = env::var("ENDPOINT").unwrap_or("unknown".to_string());
+    let endpoint = env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
+    let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
+    let base = Url::parse(&endpoint).expect("Could not parse endpoint");
+    let path = format!("metrics/json?api_key={}", api_key);
+    let url = base.join(&path).expect("Could not build request URL");
+
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
     let appsignal_response = reqwest_client
-        .post(&endpoint)
+        .post(url)
         .body(json.to_owned())
         .send()
         .await?;
