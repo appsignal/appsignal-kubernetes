@@ -10,7 +10,7 @@ use std::time::Duration;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-#[derive(Serialize)]
+#[derive(Serialize, PartialEq, Debug)]
 #[serde(rename_all = "camelCase")]
 struct AppsignalMetric {
     name: String,
@@ -154,6 +154,46 @@ fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetri
             &results["node"]["swap"]["swapUsageBytes"],
         ),
     ] {
-        out.push(AppsignalMetric::new(metric_name, &node_name, metric_value));
+        out.push(AppsignalMetric::new(metric_name, node_name, metric_value));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::extract_metrics;
+    use crate::AppsignalMetric;
+    use serde_json::json;
+
+    #[test]
+    fn extract_metrics_with_empty_results() {
+        let mut out = Vec::new();
+        extract_metrics(json!([]), "node", &mut out);
+        assert_eq!(
+            AppsignalMetric::new("node_cpu_usage_nano_cores", "node", &json!(0.0)),
+            out[0]
+        );
+    }
+
+    #[test]
+    fn extract_metrics_with_results() {
+        let mut out = Vec::new();
+        extract_metrics(
+            json!({
+             "node": {
+              "cpu": {
+               "time": "2024-03-29T12:21:36Z",
+               "usageNanoCores": 232839439,
+               "usageCoreNanoSeconds": 1118592000000 as u64
+              },
+            }
+            }),
+            "node",
+            &mut out,
+        );
+
+        assert_eq!(
+            AppsignalMetric::new("node_cpu_usage_nano_cores", "node", &json!(232839439)),
+	    out[0]
+        );
     }
 }
