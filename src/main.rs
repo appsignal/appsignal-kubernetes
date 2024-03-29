@@ -45,9 +45,12 @@ impl AppsignalMetric {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let duration = Duration::new(60, 0);
+    let mut interval = tokio::time::interval(duration);
+
     loop {
-        run().await.ok();
-        tokio::time::sleep(Duration::from_secs(60)).await;
+	interval.tick().await;
+        run().await.expect("Failed to extract metrics.")
     }
 }
 
