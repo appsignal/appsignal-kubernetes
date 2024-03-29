@@ -66,92 +66,7 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request)
             .await?;
 
-        for (metric_name, metric_value) in [
-            // use .get instead of direct access
-            (
-                "node_cpu_usage_nano_cores",
-                &kube_response["node"]["cpu"]["usageNanoCores"],
-            ),
-            (
-                "node_cpu_usage_core_nano_seconds",
-                &kube_response["node"]["cpu"]["usageCoreNanoSeconds"],
-            ),
-            (
-                "node_memory_usage_bytes",
-                &kube_response["node"]["memory"]["usageBytes"],
-            ),
-            (
-                "node_memory_working_set_bytes",
-                &kube_response["node"]["memory"]["workingSetBytes"],
-            ),
-            (
-                "node_memory_rss_bytes",
-                &kube_response["node"]["memory"]["rssBytes"],
-            ),
-            (
-                "node_memory_page_faults",
-                &kube_response["node"]["memory"]["pageFaults"],
-            ),
-            (
-                "node_memory_major_page_faults",
-                &kube_response["node"]["memory"]["majorPageFaults"],
-            ),
-            (
-                "node_network_rx_bytes",
-                &kube_response["node"]["network"]["rxBytes"],
-            ),
-            (
-                "node_network_rx_errors",
-                &kube_response["node"]["network"]["rxErrors"],
-            ),
-            (
-                "node_network_tx_bytes",
-                &kube_response["node"]["network"]["txBytes"],
-            ),
-            (
-                "node_network_tx_errors",
-                &kube_response["node"]["network"]["txErrors"],
-            ),
-            (
-                "node_fs_available_bytes",
-                &kube_response["node"]["fs"]["availableBytes"],
-            ),
-            (
-                "node_s_capacity_bytes",
-                &kube_response["node"]["fs"]["capacityBytes"],
-            ),
-            (
-                "node_fs_used_bytes",
-                &kube_response["node"]["fs"]["usedBytes"],
-            ),
-            (
-                "node_fs_inodes_free",
-                &kube_response["node"]["fs"]["inodesFree"],
-            ),
-            ("node_fs_inodes", &kube_response["node"]["fs"]["inodes"]),
-            (
-                "node_fs_inodes_used",
-                &kube_response["node"]["fs"]["inodesUsed"],
-            ),
-            (
-                "node_rlimit_maxpid",
-                &kube_response["node"]["rlimit"]["maxpid"],
-            ),
-            (
-                "node_rlimit_curproc",
-                &kube_response["node"]["rlimit"]["curproc"],
-            ),
-            (
-                "node_swap_available_bytes",
-                &kube_response["node"]["swap"]["swapAvailableBytes"],
-            ),
-            (
-                "node_swap_usage_bytes",
-                &kube_response["node"]["swap"]["swapUsageBytes"],
-            ),
-        ] {
-            out.push(AppsignalMetric::new(metric_name, &name, metric_value));
-        }
+        extract_metrics(kube_response, &name, &mut out);
     }
 
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
@@ -168,4 +83,77 @@ async fn run() -> Result<(), Error> {
     println!("Done: {:?}", appsignal_response);
 
     Ok(())
+}
+
+fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetric>) {
+    for (metric_name, metric_value) in [
+        (
+            "node_cpu_usage_nano_cores",
+            &results["node"]["cpu"]["usageNanoCores"],
+        ),
+        (
+            "node_cpu_usage_core_nano_seconds",
+            &results["node"]["cpu"]["usageCoreNanoSeconds"],
+        ),
+        (
+            "node_memory_usage_bytes",
+            &results["node"]["memory"]["usageBytes"],
+        ),
+        (
+            "node_memory_working_set_bytes",
+            &results["node"]["memory"]["workingSetBytes"],
+        ),
+        (
+            "node_memory_rss_bytes",
+            &results["node"]["memory"]["rssBytes"],
+        ),
+        (
+            "node_memory_page_faults",
+            &results["node"]["memory"]["pageFaults"],
+        ),
+        (
+            "node_memory_major_page_faults",
+            &results["node"]["memory"]["majorPageFaults"],
+        ),
+        (
+            "node_network_rx_bytes",
+            &results["node"]["network"]["rxBytes"],
+        ),
+        (
+            "node_network_rx_errors",
+            &results["node"]["network"]["rxErrors"],
+        ),
+        (
+            "node_network_tx_bytes",
+            &results["node"]["network"]["txBytes"],
+        ),
+        (
+            "node_network_tx_errors",
+            &results["node"]["network"]["txErrors"],
+        ),
+        (
+            "node_fs_available_bytes",
+            &results["node"]["fs"]["availableBytes"],
+        ),
+        (
+            "node_s_capacity_bytes",
+            &results["node"]["fs"]["capacityBytes"],
+        ),
+        ("node_fs_used_bytes", &results["node"]["fs"]["usedBytes"]),
+        ("node_fs_inodes_free", &results["node"]["fs"]["inodesFree"]),
+        ("node_fs_inodes", &results["node"]["fs"]["inodes"]),
+        ("node_fs_inodes_used", &results["node"]["fs"]["inodesUsed"]),
+        ("node_rlimit_maxpid", &results["node"]["rlimit"]["maxpid"]),
+        ("node_rlimit_curproc", &results["node"]["rlimit"]["curproc"]),
+        (
+            "node_swap_available_bytes",
+            &results["node"]["swap"]["swapAvailableBytes"],
+        ),
+        (
+            "node_swap_usage_bytes",
+            &results["node"]["swap"]["swapUsageBytes"],
+        ),
+    ] {
+        out.push(AppsignalMetric::new(metric_name, &node_name, metric_value));
+    }
 }
