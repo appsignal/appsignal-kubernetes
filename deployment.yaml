@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appsignal-kubernetes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appsignal-kubernetes
+  template:
+    metadata:
+      labels:
+        app: appsignal-kubernetes
+    spec:
+      containers:
+      - name: appsignal-kubernetes
+        image: appsignal/appsignal-kubernetes-test:latest
