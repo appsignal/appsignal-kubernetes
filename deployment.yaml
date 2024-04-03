@@ -23,16 +23,21 @@ metadata:
   name: appsignal-kubernetes-service-account
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: appsignal-kubernetes-role
 rules:
-- apiGroups: [""]
-  resources: ["nodes", "nodes/proxy"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - "nodes/proxy"
+    verbs:
+      - get
+      - list
+      - watch
 ---
-kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
 metadata:
   name: appsignal-kubernetes-role-binding
 subjects:
@@ -41,4 +46,17 @@ subjects:
 roleRef:
   kind: Role
   name: appsignal-kubernetes-role
-  apiGroup: "rbac.authorization.k8s.io"
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: appsignal-kubernetes-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: appsignal-kubernetes-role
+subjects:
+  - kind: ServiceAccount
+    name: appsignal-kubernetes-service-account
+    namespace: default
