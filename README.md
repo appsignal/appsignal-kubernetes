@@ -2,13 +2,17 @@
 
 Extracts Kubenetes Node data.
 
-## Usage
+## Installation
 
-On a machine running a Kubernetes cluster, start the operator, passing an `APPSIGNAL_API_KEY` (find your *Front-end* API key in [App settings](https://appsignal.com/redirect-to/app?to=info)):
+In a Kubernetes cluster, set up your AppSignal API key (find your *Front-end* API key in [App settings](https://appsignal.com/redirect-to/app?to=info)) by creating a secret:
 
-    APPSIGNAL_API_KEY="00000000-0000-0000-0000-000000000000" cargo run
+    kubectl create secret generic appsignal --from-literal=api-key=00000000-0000-0000-0000-000000000000
 
-The operator will start sending Kubernetes node metrics every minute.
+Then, add the AppSignal deployment to your cluster:
+
+    kubectl apply https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/deployment/deployment.yaml
+
+AppSignal for Kubernetes will start sending Kubernetes node metrics every minute.
 To see your metrics, add a custom dashboard with the reported fields.
 
 Here's an example of a dashboard showing all currently reported values:
