@@ -28,8 +28,8 @@ metadata:
   name: appsignal-kubernetes-role
 rules:
 - apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["list"]
+  resources: ["nodes", "nodes/proxy"]
+  verbs: ["get", "list", "watch"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -41,4 +41,4 @@ subjects:
 roleRef:
   kind: Role
   name: appsignal-kubernetes-role
-  apiGroup: ""
+  apiGroup: "rbac.authorization.k8s.io"
