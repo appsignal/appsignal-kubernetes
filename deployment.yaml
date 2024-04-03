@@ -12,6 +12,33 @@ spec:
       labels:
         app: appsignal-kubernetes
     spec:
+      serviceAccountName: appsignal-kubernetes-service-account
       containers:
       - name: appsignal-kubernetes
         image: appsignal/appsignal-kubernetes-test:latest
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appsignal-kubernetes-service-account
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: appsignal-kubernetes-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: appsignal-kubernetes-role-binding
+subjects:
+- kind: ServiceAccount
+  name: appsignal-kubernetes-service-account
+roleRef:
+  kind: Role
+  name: appsignal-kubernetes-role
+  apiGroup: ""
