@@ -16,6 +16,9 @@ spec:
       containers:
       - name: appsignal-kubernetes
         image: appsignal/appsignal-kubernetes-test:latest
+        env:
+        - name: APPSIGNAL_API_KEY
+          value: "00000000-0000-0000-0000-000000000000"
 ---
 apiVersion: v1
 kind: ServiceAccount
