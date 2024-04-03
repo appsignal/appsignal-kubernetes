@@ -18,7 +18,10 @@ spec:
         image: appsignal/appsignal-kubernetes-test:latest
         env:
         - name: APPSIGNAL_API_KEY
-          value: "00000000-0000-0000-0000-000000000000"
+          valueFrom:
+            secretKeyRef:
+              name: appsignal
+              key: api-key
 ---
 apiVersion: v1
 kind: ServiceAccount
