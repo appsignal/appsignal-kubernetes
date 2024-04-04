@@ -15,7 +15,7 @@ spec:
       serviceAccountName: appsignal-kubernetes-service-account
       containers:
       - name: appsignal-kubernetes
-        image: appsignal/appsignal-kubernetes-test:latest
+        image: appsignal/appsignal-kubernetes:latest
         env:
         - name: APPSIGNAL_API_KEY
           valueFrom:
