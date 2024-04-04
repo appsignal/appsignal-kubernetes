@@ -19,12 +19,12 @@ Here's an example of a dashboard showing all currently reported values:
 
 ``` json
 {
-  "title": "k8s",
+  "title": "Kubernetes Nodes",
   "description": "",
   "visuals": [
     {
       "title": "Node CPU Usage",
-      "description": "usageNanoCores, usageCoreNanoSeconds",
+      "description": "node_cpu_usage_nano_cores",
       "line_label": "%name% %node%",
       "display": "LINE",
       "format": "number",
@@ -43,30 +43,17 @@ Here's an example of a dashboard showing all currently reported values:
               "value": "*"
             }
           ]
-        },
-        {
-          "name": "node_cpu_usage_core_nano_seconds",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
         }
       ],
       "type": "timeseries"
     },
     {
       "title": "Node Memory Usage",
-      "description": "usageBytes, workingSetBytes, rssBytes, pageFaults, majorPageFaults",
+      "description": "node_memory_usage_bytes vs node_memory_available_bytes",
       "line_label": "%name% %node%",
       "display": "LINE",
-      "format": "number",
+      "format": "size",
+      "format_input": "byte",
       "draw_null_as_zero": true,
       "metrics": [
         {
@@ -84,49 +71,7 @@ Here's an example of a dashboard showing all currently reported values:
           ]
         },
         {
-          "name": "node_memory_working_set_bytes",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_memory_rss_bytes",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_memory_page_faults",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_memory_major_page_faults",
+          "name": "node_memory_available_bytes",
           "fields": [
             {
               "field": "GAUGE"
@@ -143,15 +88,16 @@ Here's an example of a dashboard showing all currently reported values:
       "type": "timeseries"
     },
     {
-      "title": "Node Network Usage",
-      "description": "rxBytes, rxErrors, txBytes, txErrors",
+      "title": "Node Swap",
+      "description": "node_swap_usage_bytes vs. node_swap_available_bytes",
       "line_label": "%name% %node%",
       "display": "LINE",
-      "format": "number",
+      "format": "size",
+      "format_input": "byte",
       "draw_null_as_zero": true,
       "metrics": [
         {
-          "name": "node_network_rx_bytes",
+          "name": "node_swap_available_bytes",
           "fields": [
             {
               "field": "GAUGE"
@@ -165,35 +111,7 @@ Here's an example of a dashboard showing all currently reported values:
           ]
         },
         {
-          "name": "node_network_rx_errors",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_network_tx_bytes",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_network_tx_errors",
+          "name": "node_swap_usage_bytes",
           "fields": [
             {
               "field": "GAUGE"
@@ -211,28 +129,15 @@ Here's an example of a dashboard showing all currently reported values:
     },
     {
       "title": "Node File System Usage",
-      "description": "availableBytes, capacityBytes, usedBytes",
+      "description": "node_fs_used_bytes vs node_fs_available_bytes",
       "line_label": "%name% %node%",
       "display": "LINE",
-      "format": "number",
+      "format": "size",
+      "format_input": "byte",
       "draw_null_as_zero": true,
       "metrics": [
         {
           "name": "node_fs_available_bytes",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_fs_capacity_bytes",
           "fields": [
             {
               "field": "GAUGE"
@@ -263,8 +168,60 @@ Here's an example of a dashboard showing all currently reported values:
       "type": "timeseries"
     },
     {
+      "title": "Node Network Traffic Received",
+      "description": "node_network_rx_bytes",
+      "line_label": "%name% %node%",
+      "display": "LINE",
+      "format": "size",
+      "format_input": "byte",
+      "draw_null_as_zero": true,
+      "metrics": [
+        {
+          "name": "node_network_rx_bytes",
+          "fields": [
+            {
+              "field": "GAUGE"
+            }
+          ],
+          "tags": [
+            {
+              "key": "node",
+              "value": "*"
+            }
+          ]
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "title": "Node Network Traffic Transmitted",
+      "description": "node_network_tx_bytes",
+      "line_label": "%name% %node%",
+      "display": "LINE",
+      "format": "size",
+      "format_input": "byte",
+      "draw_null_as_zero": true,
+      "metrics": [
+        {
+          "name": "node_network_tx_bytes",
+          "fields": [
+            {
+              "field": "GAUGE"
+            }
+          ],
+          "tags": [
+            {
+              "key": "node",
+              "value": "*"
+            }
+          ]
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
       "title": "Node Inodes Usage",
-      "description": "inodes, inodesFree, inodesUsed",
+      "description": "node_fs_inodes_free & node_fs_inodes_used vs node_fs_inodes",
       "line_label": "%name% %node%",
       "display": "LINE",
       "format": "number",
@@ -317,7 +274,7 @@ Here's an example of a dashboard showing all currently reported values:
     },
     {
       "title": "Node Resource Limits",
-      "description": "maxpid, curproc",
+      "description": "node_rlimit_curproc vs node_rlimit_maxpid",
       "line_label": "%name% %node%",
       "display": "LINE",
       "format": "number",
@@ -339,45 +296,6 @@ Here's an example of a dashboard showing all currently reported values:
         },
         {
           "name": "node_rlimit_curproc",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        }
-      ],
-      "type": "timeseries"
-    },
-    {
-      "title": "Node Swap",
-      "description": "swapAvailableBytes, swapUsageBytes",
-      "line_label": "%name% %node%",
-      "display": "LINE",
-      "format": "number",
-      "draw_null_as_zero": true,
-      "metrics": [
-        {
-          "name": "node_swap_available_bytes",
-          "fields": [
-            {
-              "field": "GAUGE"
-            }
-          ],
-          "tags": [
-            {
-              "key": "node",
-              "value": "*"
-            }
-          ]
-        },
-        {
-          "name": "node_swap_usage_bytes",
           "fields": [
             {
               "field": "GAUGE"
