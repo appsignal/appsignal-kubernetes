@@ -104,6 +104,10 @@ fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetri
             &results["node"]["cpu"]["usageCoreNanoSeconds"],
         ),
         (
+            "node_memory_available_bytes",
+            &results["node"]["memory"]["availableBytes"],
+        ),
+        (
             "node_memory_usage_bytes",
             &results["node"]["memory"]["usageBytes"],
         ),
