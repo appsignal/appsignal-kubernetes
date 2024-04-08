@@ -43,18 +43,6 @@ rules:
       - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: appsignal-kubernetes-role-binding
-subjects:
-- kind: ServiceAccount
-  name: appsignal-kubernetes-service-account
-roleRef:
-  kind: Role
-  name: appsignal-kubernetes-role
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: appsignal-kubernetes-cluster-role-binding
