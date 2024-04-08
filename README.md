@@ -2,13 +2,47 @@
 
 Extracts Kubenetes Node data.
 
-## Usage
+## Installation
 
-On a machine running a Kubernetes cluster, start the operator, passing an `APPSIGNAL_API_KEY` (find your *Front-end* API key in [App settings](https://appsignal.com/redirect-to/app?to=info)):
+In a Kubernetes cluster, set up your AppSignal API key (find your *Front-end* API key in [App settings](https://appsignal.com/redirect-to/app?to=info)) by creating a secret:
 
-    APPSIGNAL_API_KEY="00000000-0000-0000-0000-000000000000" cargo run
+    kubectl create secret generic appsignal --from-literal=api-key=00000000-0000-0000-0000-000000000000
 
-The operator will start sending Kubernetes node metrics every minute.
+Then, add the AppSignal deployment to your cluster:
+
+    kubectl apply https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/deployment/deployment.yaml
+
+AppSignal for Kubernetes will start sending Kubernetes automatically.
+
+## Metrics
+
+AppSignal for Kubernetes extracts metrics for all nodes running in a cluster every minute.
+
+It extracts the following metrics from the `/api/v1/nodes/<NODE>/proxy/stats/summary` endpoint:
+
+- node_cpu_usage_nano_cores
+- node_cpu_usage_core_nano_seconds
+- node_memory_usage_bytes
+- node_memory_working_set_bytes
+- node_memory_rss_bytes
+- node_memory_page_faults
+- node_memory_major_page_faults
+- node_network_rx_bytes
+- node_network_rx_errors
+- node_network_tx_bytes
+- node_network_tx_errors
+- node_fs_available_bytes
+- node_s_capacity_bytes
+- node_fs_inodes_free
+- node_fs_inodes
+- node_fs_inodes_used
+- node_rlimit_maxpid
+- node_rlimit_curproc
+- node_swap_available_bytes
+- node_swap_usage_bytes
+
+## Dashboard
+
 To see your metrics, add a custom dashboard with the reported fields.
 
 Here's an example of a dashboard showing all currently reported values:
