@@ -20,11 +20,7 @@ struct AppsignalMetric {
 }
 
 impl AppsignalMetric {
-    pub fn new(metric_name: &str, node_name: &str, value: &serde_json::Value) -> AppsignalMetric {
-        // Create tags
-        let mut tags = HashMap::with_capacity(1);
-        tags.insert("node".to_owned(), node_name.to_owned());
-
+    pub fn new(metric_name: &str, tags: HashMap<String, String>, value: &serde_json::Value) -> AppsignalMetric {
         // See if we can use value
         let value = match value {
             Value::Number(value) => match value.as_f64() {
@@ -166,7 +162,10 @@ fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetri
             &results["node"]["swap"]["swapUsageBytes"],
         ),
     ] {
-        out.push(AppsignalMetric::new(metric_name, node_name, metric_value));
+
+        let mut tags = HashMap::with_capacity(1);
+        tags.insert("node".to_owned(), node_name.to_owned());
+        out.push(AppsignalMetric::new(metric_name, tags, metric_value));
     }
 }
 
@@ -174,6 +173,7 @@ fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetri
 mod tests {
     use crate::extract_metrics;
     use crate::AppsignalMetric;
+    use crate::HashMap;
     use serde_json::json;
 
     #[test]
@@ -181,7 +181,11 @@ mod tests {
         let mut out = Vec::new();
         extract_metrics(json!([]), "node", &mut out);
         assert_eq!(
-            AppsignalMetric::new("node_cpu_usage_nano_cores", "node", &json!(0.0)),
+            AppsignalMetric::new(
+                "node_cpu_usage_nano_cores",
+                HashMap::from([("node".to_string(), "node".to_string())]),
+                &json!(0.0)
+            ),
             out[0]
         );
     }
@@ -204,8 +208,12 @@ mod tests {
         );
 
         assert_eq!(
-            AppsignalMetric::new("node_cpu_usage_nano_cores", "node", &json!(232839439)),
-	    out[0]
+            AppsignalMetric::new(
+                "node_cpu_usage_nano_cores",
+                HashMap::from([("node".to_string(), "node".to_string())]),
+                &json!(232839439)
+            ),
+            out[0]
         );
     }
 }
