@@ -65,7 +65,7 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request)
             .await?;
 
-        extract_metrics(kube_response, &name, &mut out);
+        extract_node_metrics(kube_response, &name, &mut out);
     }
 
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
@@ -89,7 +89,7 @@ async fn run() -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetric>) {
+fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetric>) {
     for (metric_name, metric_value) in [
         (
             "node_cpu_usage_nano_cores",
@@ -171,15 +171,15 @@ fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetri
 
 #[cfg(test)]
 mod tests {
-    use crate::extract_metrics;
+    use crate::extract_node_metrics;
     use crate::AppsignalMetric;
     use crate::HashMap;
     use serde_json::json;
 
     #[test]
-    fn extract_metrics_with_empty_results() {
+    fn extract_node_metrics_with_empty_results() {
         let mut out = Vec::new();
-        extract_metrics(json!([]), "node", &mut out);
+        extract_node_metrics(json!([]), "node", &mut out);
         assert_eq!(
             AppsignalMetric::new(
                 "node_cpu_usage_nano_cores",
@@ -191,9 +191,9 @@ mod tests {
     }
 
     #[test]
-    fn extract_metrics_with_results() {
+    fn extract_node_metrics_with_results() {
         let mut out = Vec::new();
-        extract_metrics(
+        extract_node_metrics(
             json!({
              "node": {
               "cpu": {
