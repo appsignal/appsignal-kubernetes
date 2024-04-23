@@ -208,6 +208,7 @@ fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<Appsignal
 #[cfg(test)]
 mod tests {
     use crate::extract_node_metrics;
+    use crate::extract_pod_metrics;
     use crate::AppsignalMetric;
     use crate::HashMap;
     use serde_json::json;
@@ -247,6 +248,45 @@ mod tests {
             AppsignalMetric::new(
                 "node_cpu_usage_nano_cores",
                 HashMap::from([("node".to_string(), "node".to_string())]),
+                &json!(232839439)
+            ),
+            out[0]
+        );
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_empty_results() {
+        let mut out = Vec::new();
+        extract_pod_metrics(&json!([]), "pod", &mut out);
+        assert_eq!(
+            AppsignalMetric::new(
+                "pod_cpu_usage_nano_cores",
+                HashMap::from([("pod".to_string(), "pod".to_string())]),
+                &json!(0.0)
+            ),
+            out[0]
+        );
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_results() {
+        let mut out = Vec::new();
+        extract_pod_metrics(
+            &json!({
+              "cpu": {
+               "time": "2024-03-29T12:21:36Z",
+               "usageNanoCores": 232839439,
+               "usageCoreNanoSeconds": 1118592000000 as u64
+              },
+            }),
+            "pod",
+            &mut out,
+        );
+
+        assert_eq!(
+            AppsignalMetric::new(
+                "pod_cpu_usage_nano_cores",
+                HashMap::from([("pod".to_string(), "pod".to_string())]),
                 &json!(232839439)
             ),
             out[0]
