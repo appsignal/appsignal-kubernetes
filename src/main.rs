@@ -20,7 +20,11 @@ struct AppsignalMetric {
 }
 
 impl AppsignalMetric {
-    pub fn new(metric_name: &str, tags: HashMap<String, String>, value: &serde_json::Value) -> AppsignalMetric {
+    pub fn new(
+        metric_name: &str,
+        tags: HashMap<String, String>,
+        value: &serde_json::Value,
+    ) -> AppsignalMetric {
         // See if we can use value
         let value = match value {
             Value::Number(value) => match value.as_f64() {
@@ -45,7 +49,7 @@ async fn main() -> Result<(), Error> {
     let mut interval = tokio::time::interval(duration);
 
     loop {
-	interval.tick().await;
+        interval.tick().await;
         run().await.expect("Failed to extract metrics.")
     }
 }
@@ -70,7 +74,8 @@ async fn run() -> Result<(), Error> {
 
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
 
-    let endpoint = env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
+    let endpoint =
+        env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
     let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
     let base = Url::parse(&endpoint).expect("Could not parse endpoint");
     let path = format!("metrics/json?api_key={}", api_key);
@@ -162,7 +167,6 @@ fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<Appsignal
             &results["node"]["swap"]["swapUsageBytes"],
         ),
     ] {
-
         let mut tags = HashMap::with_capacity(1);
         tags.insert("node".to_owned(), node_name.to_owned());
         out.push(AppsignalMetric::new(metric_name, tags, metric_value));
