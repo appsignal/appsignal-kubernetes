@@ -69,6 +69,10 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request)
             .await?;
 
+        for pod in kube_response["pods"].as_array().unwrap() {
+            extract_pod_metrics(pod, pod["podRef"]["name"].as_str().unwrap(), &mut out);
+        }
+
         extract_node_metrics(kube_response, &name, &mut out);
     }
 
@@ -92,6 +96,32 @@ async fn run() -> Result<(), Error> {
     println!("Done: {:?}", appsignal_response);
 
     Ok(())
+}
+
+fn extract_pod_metrics(results: &Value, pod_name: &str, out: &mut Vec<AppsignalMetric>) {
+    for (metric_name, metric_value) in [
+        (
+            "pod_cpu_usage_nano_cores",
+            &results["cpu"]["usageNanoCores"],
+        ),
+        (
+            "pod_cpu_usage_core_nano_seconds",
+            &results["cpu"]["usageCoreNanoSeconds"],
+        ),
+        (
+            "pod_memory_working_set_bytes",
+            &results["memory"]["workingSetBytes"],
+        ),
+        (
+            "pod_swap_available_bytes",
+            &results["swap"]["swapAvailableBytes"],
+        ),
+        ("pod_swap_usage_bytes", &results["swap"]["swapUsageBytes"]),
+    ] {
+        let mut tags = HashMap::with_capacity(1);
+        tags.insert("pod".to_owned(), pod_name.to_owned());
+        out.push(AppsignalMetric::new(metric_name, tags, metric_value));
+    }
 }
 
 fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetric>) {
