@@ -69,13 +69,10 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request)
             .await?;
 
-        match kube_response["pods"].as_array() {
-            Some(pods) => {
-                for pod in pods {
-                    extract_pod_metrics(pod, pod["podRef"]["name"].as_str().unwrap(), &mut out);
-                }
+        if let Some(pods) = kube_response["pods"].as_array() {
+            for pod in pods {
+                extract_pod_metrics(pod, pod["podRef"]["name"].as_str().unwrap(), &mut out);
             }
-            None => (),
         };
 
         extract_node_metrics(kube_response, &name, &mut out);
