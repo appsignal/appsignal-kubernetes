@@ -69,9 +69,14 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request)
             .await?;
 
-        for pod in kube_response["pods"].as_array().unwrap() {
-            extract_pod_metrics(pod, pod["podRef"]["name"].as_str().unwrap(), &mut out);
-        }
+        match kube_response["pods"].as_array() {
+            Some(pods) => {
+                for pod in pods {
+                    extract_pod_metrics(pod, pod["podRef"]["name"].as_str().unwrap(), &mut out);
+                }
+            }
+            None => (),
+        };
 
         extract_node_metrics(kube_response, &name, &mut out);
     }
