@@ -71,7 +71,13 @@ async fn run() -> Result<(), Error> {
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                extract_pod_metrics(pod, pod["podRef"]["name"].as_str().unwrap(), &mut out);
+                extract_pod_metrics(
+                    pod,
+                    pod["podRef"]["name"]
+                        .as_str()
+                        .expect("Could not extract pod name"),
+                    &mut out,
+                );
             }
         };
 
