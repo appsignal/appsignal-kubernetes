@@ -16,9 +16,11 @@ AppSignal for Kubernetes will start sending Kubernetes automatically.
 
 ## Metrics
 
-AppSignal for Kubernetes extracts metrics for all nodes running in a cluster every minute.
+AppSignal for Kubernetes extracts metrics for all nodes and pods running in a cluster every minute.
 
 It extracts the following metrics from the `/api/v1/nodes/<NODE>/proxy/stats/summary` endpoint:
+
+### Node metrics
 
 - node_cpu_usage_nano_cores
 - node_cpu_usage_core_nano_seconds
@@ -40,6 +42,14 @@ It extracts the following metrics from the `/api/v1/nodes/<NODE>/proxy/stats/sum
 - node_rlimit_curproc
 - node_swap_available_bytes
 - node_swap_usage_bytes
+
+### Pod metrics
+
+- pod_cpu_usage_nano_cores
+- pod_cpu_usage_core_nano_seconds
+- pod_memory_working_set_bytes
+- pod_swap_available_bytes
+- pod_swap_usage_bytes
 
 ## Automated Dashboard
 
