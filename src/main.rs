@@ -20,11 +20,11 @@ struct AppsignalMetric {
 }
 
 impl AppsignalMetric {
-    pub fn new(metric_name: &str, node_name: &str, value: &serde_json::Value) -> AppsignalMetric {
-        // Create tags
-        let mut tags = HashMap::with_capacity(1);
-        tags.insert("node".to_owned(), node_name.to_owned());
-
+    pub fn new(
+        metric_name: &str,
+        tags: HashMap<String, String>,
+        value: &serde_json::Value,
+    ) -> AppsignalMetric {
         // See if we can use value
         let value = match value {
             Value::Number(value) => match value.as_f64() {
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
     let mut interval = tokio::time::interval(duration);
 
     loop {
-	interval.tick().await;
+        interval.tick().await;
         run().await.expect("Failed to extract metrics.")
     }
 }
@@ -69,12 +69,13 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request)
             .await?;
 
-        extract_metrics(kube_response, &name, &mut out);
+        extract_node_metrics(kube_response, &name, &mut out);
     }
 
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
 
-    let endpoint = env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
+    let endpoint =
+        env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
     let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
     let base = Url::parse(&endpoint).expect("Could not parse endpoint");
     let path = format!("metrics/json?api_key={}", api_key);
@@ -93,7 +94,7 @@ async fn run() -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetric>) {
+fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetric>) {
     for (metric_name, metric_value) in [
         (
             "node_cpu_usage_nano_cores",
@@ -166,30 +167,37 @@ fn extract_metrics(results: Value, node_name: &str, out: &mut Vec<AppsignalMetri
             &results["node"]["swap"]["swapUsageBytes"],
         ),
     ] {
-        out.push(AppsignalMetric::new(metric_name, node_name, metric_value));
+        let mut tags = HashMap::with_capacity(1);
+        tags.insert("node".to_owned(), node_name.to_owned());
+        out.push(AppsignalMetric::new(metric_name, tags, metric_value));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::extract_metrics;
+    use crate::extract_node_metrics;
     use crate::AppsignalMetric;
+    use crate::HashMap;
     use serde_json::json;
 
     #[test]
-    fn extract_metrics_with_empty_results() {
+    fn extract_node_metrics_with_empty_results() {
         let mut out = Vec::new();
-        extract_metrics(json!([]), "node", &mut out);
+        extract_node_metrics(json!([]), "node", &mut out);
         assert_eq!(
-            AppsignalMetric::new("node_cpu_usage_nano_cores", "node", &json!(0.0)),
+            AppsignalMetric::new(
+                "node_cpu_usage_nano_cores",
+                HashMap::from([("node".to_string(), "node".to_string())]),
+                &json!(0.0)
+            ),
             out[0]
         );
     }
 
     #[test]
-    fn extract_metrics_with_results() {
+    fn extract_node_metrics_with_results() {
         let mut out = Vec::new();
-        extract_metrics(
+        extract_node_metrics(
             json!({
              "node": {
               "cpu": {
@@ -204,8 +212,12 @@ mod tests {
         );
 
         assert_eq!(
-            AppsignalMetric::new("node_cpu_usage_nano_cores", "node", &json!(232839439)),
-	    out[0]
+            AppsignalMetric::new(
+                "node_cpu_usage_nano_cores",
+                HashMap::from([("node".to_string(), "node".to_string())]),
+                &json!(232839439)
+            ),
+            out[0]
         );
     }
 }
