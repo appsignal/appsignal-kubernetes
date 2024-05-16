@@ -10,7 +10,7 @@ In a Kubernetes cluster, set up your AppSignal API key (find your *Front-end* AP
 
 Then, add the AppSignal deployment to your cluster:
 
-    kubectl apply https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/main/deployment.yaml
+    kubectl apply -f https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/main/deployment.yaml
 
 AppSignal for Kubernetes will start sending Kubernetes automatically.
 
