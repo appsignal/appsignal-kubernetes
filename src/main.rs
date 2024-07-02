@@ -85,21 +85,19 @@ struct KubernetesMetric {
 }
 
 impl KubernetesMetric {
-    pub fn from_json(json: serde_json::Value) -> KubernetesMetric {
+    pub fn from_node_json(json: serde_json::Value) -> KubernetesMetric {
         KubernetesMetric {
             metric_type: "node".to_string(),
-            name: json["node"]["nodeName"].to_string(),
-            cpu_usage_nano_cores: json["node"]["cpu"]["usageNanoCores"].as_u64().unwrap(),
-            cpu_usage_core_nano_seconds: json["node"]["cpu"]["usageCoreNanoSeconds"]
-                .as_u64()
-                .unwrap(),
-            memory_available_bytes: json["node"]["memory"]["availableBytes"].as_u64().unwrap(),
-            memory_usage_bytes: json["node"]["memory"]["usageBytes"].as_u64().unwrap(),
-            memory_working_set_bytes: json["node"]["memory"]["workingSetBytes"].as_u64().unwrap(),
-            memory_rss_bytes: json["node"]["memory"]["rssBytes"].as_u64().unwrap(),
-            memory_page_faults: json["node"]["memory"]["pageFaults"].as_u64().unwrap(),
-            memory_major_page_faults: json["node"]["memory"]["majorPageFaults"].as_u64().unwrap(),
-            swap_usage_bytes: json["node"]["swap"]["swapUsageBytes"].as_u64().unwrap(),
+            name: json["nodeName"].to_string(),
+            cpu_usage_nano_cores: json["cpu"]["usageNanoCores"].as_u64().unwrap(),
+            cpu_usage_core_nano_seconds: json["cpu"]["usageCoreNanoSeconds"].as_u64().unwrap(),
+            memory_available_bytes: json["memory"]["availableBytes"].as_u64().unwrap(),
+            memory_usage_bytes: json["memory"]["usageBytes"].as_u64().unwrap(),
+            memory_working_set_bytes: json["memory"]["workingSetBytes"].as_u64().unwrap(),
+            memory_rss_bytes: json["memory"]["rssBytes"].as_u64().unwrap(),
+            memory_page_faults: json["memory"]["pageFaults"].as_u64().unwrap(),
+            memory_major_page_faults: json["memory"]["majorPageFaults"].as_u64().unwrap(),
+            swap_usage_bytes: json["swap"]["swapUsageBytes"].as_u64().unwrap(),
         }
     }
 }
@@ -167,8 +165,8 @@ async fn run(metrics_url: &Url) -> Result<(), Error> {
 
 fn extract_metrics(kube_response: &Value, out: &mut HashSet<AppsignalMetricKey>) {
     println!(
-        "KubernetesMetric: {:?}",
-        KubernetesMetric::from_json(kube_response.clone())
+        "Node: {:?}",
+        KubernetesMetric::from_node_json(kube_response["node"].clone())
     );
 
     extract_node_metrics(&kube_response["node"], out);
