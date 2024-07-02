@@ -58,6 +58,52 @@ impl PartialEq for AppsignalMetricKey {
 
 impl Eq for AppsignalMetricKey {}
 
+#[derive(Debug)]
+struct KubernetesMetric {
+    metric_type: String,
+    name: String,
+    cpu_usage_nano_cores: u64,
+    cpu_usage_core_nano_seconds: u64,
+    memory_available_bytes: u64,
+    memory_usage_bytes: u64,
+    memory_working_set_bytes: u64,
+    memory_rss_bytes: u64,
+    memory_page_faults: u64,
+    memory_major_page_faults: u64,
+    // network_rx_bytes: u64,
+    // network_rx_errors: u64,
+    // network_tx_bytes: u64,
+    // network_tx_errors: u64,
+    // fs_available_bytes: u64,
+    // fs_capacity_bytes: u64,
+    // fs_inodes_free: u64,
+    // fs_inodes: u64,
+    // fs_inodes_used: u64,
+    // rlimit_maxpid: u64,
+    // rlimit_curproc: u64,
+    swap_usage_bytes: u64,
+}
+
+impl KubernetesMetric {
+    pub fn from_json(json: serde_json::Value) -> KubernetesMetric {
+        KubernetesMetric {
+            metric_type: "node".to_string(),
+            name: json["node"]["nodeName"].to_string(),
+            cpu_usage_nano_cores: json["node"]["cpu"]["usageNanoCores"].as_u64().unwrap(),
+            cpu_usage_core_nano_seconds: json["node"]["cpu"]["usageCoreNanoSeconds"]
+                .as_u64()
+                .unwrap(),
+            memory_available_bytes: json["node"]["memory"]["availableBytes"].as_u64().unwrap(),
+            memory_usage_bytes: json["node"]["memory"]["usageBytes"].as_u64().unwrap(),
+            memory_working_set_bytes: json["node"]["memory"]["workingSetBytes"].as_u64().unwrap(),
+            memory_rss_bytes: json["node"]["memory"]["rssBytes"].as_u64().unwrap(),
+            memory_page_faults: json["node"]["memory"]["pageFaults"].as_u64().unwrap(),
+            memory_major_page_faults: json["node"]["memory"]["majorPageFaults"].as_u64().unwrap(),
+            swap_usage_bytes: json["node"]["swap"]["swapUsageBytes"].as_u64().unwrap(),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let duration = Duration::new(60, 0);
@@ -120,6 +166,11 @@ async fn run(metrics_url: &Url) -> Result<(), Error> {
 }
 
 fn extract_metrics(kube_response: &Value, out: &mut HashSet<AppsignalMetricKey>) {
+    println!(
+        "KubernetesMetric: {:?}",
+        KubernetesMetric::from_json(kube_response.clone())
+    );
+
     extract_node_metrics(&kube_response["node"], out);
 
     if let Some(pods) = kube_response["pods"].as_array() {
