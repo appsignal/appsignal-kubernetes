@@ -67,6 +67,13 @@ struct KubernetesMetric {
     fs_inodes_used: Option<u64>,
     rlimit_maxpid: Option<u64>,
     rlimit_curproc: Option<u64>,
+    ephemeral_storage_available_bytes: Option<u64>,
+    ephemeral_storage_capacity_bytes: Option<u64>,
+    ephemeral_storage_used_bytes: Option<u64>,
+    ephemeral_storage_inodes_free: Option<u64>,
+    ephemeral_storage_inodes: Option<u64>,
+    ephemeral_storage_inodes_used: Option<u64>,
+    process_count: Option<u64>,
     swap_usage_bytes: Option<u64>,
 }
 
@@ -95,6 +102,49 @@ impl KubernetesMetric {
             fs_inodes_used: json["fs"]["inodesUsed"].as_u64(),
             rlimit_maxpid: json["rlimit"]["maxpid"].as_u64(),
             rlimit_curproc: json["rlimit"]["curproc"].as_u64(),
+            ephemeral_storage_available_bytes: None,
+            ephemeral_storage_capacity_bytes: None,
+            ephemeral_storage_used_bytes: None,
+            ephemeral_storage_inodes_free: None,
+            ephemeral_storage_inodes: None,
+            ephemeral_storage_inodes_used: None,
+            process_count: None,
+            swap_usage_bytes: json["swap"]["swapUsageBytes"].as_u64(),
+
+        }
+    }
+
+    pub fn from_pod_json(json: serde_json::Value) -> KubernetesMetric {
+        KubernetesMetric {
+            metric_type: "pod".to_string(),
+            name: json["podRef"]["name"].to_string(),
+            cpu_usage_nano_cores: json["cpu"]["usageNanoCores"].as_u64(),
+            cpu_usage_core_nano_seconds: json["cpu"]["usageCoreNanoSeconds"].as_u64(),
+            memory_available_bytes: None,
+            memory_usage_bytes: json["memory"]["usageBytes"].as_u64(),
+            memory_working_set_bytes: json["memory"]["workingSetBytes"].as_u64(),
+            memory_rss_bytes: json["memory"]["rssBytes"].as_u64(),
+            memory_page_faults: json["memory"]["pageFaults"].as_u64(),
+            memory_major_page_faults: json["memory"]["majorPageFaults"].as_u64(),
+            network_rx_bytes: None,
+            network_rx_errors: None,
+            network_tx_bytes: None,
+            network_tx_errors: None,
+            fs_available_bytes: None,
+            fs_capacity_bytes: None,
+            fs_used_bytes: None,
+            fs_inodes_free: None,
+            fs_inodes: None,
+            fs_inodes_used: None,
+            rlimit_maxpid: None,
+            rlimit_curproc: None,
+            ephemeral_storage_available_bytes: json["ephemeral-storage"]["availableBytes"].as_u64(),
+            ephemeral_storage_capacity_bytes: json["ephemeral-storage"]["capacityBytes"].as_u64(),
+            ephemeral_storage_used_bytes: json["ephemeral-storage"]["usedBytes"].as_u64(),
+            ephemeral_storage_inodes_free: json["ephemeral-storage"]["InodesFree"].as_u64(),
+            ephemeral_storage_inodes: json["ephemeral-storage"]["Inodes"].as_u64(),
+            ephemeral_storage_inodes_used: json["ephemeral-storage"]["InodesUsed"].as_u64(),
+            process_count: json["process_stats"]["process_count"].as_u64(),
             swap_usage_bytes: json["swap"]["swapUsageBytes"].as_u64(),
         }
     }
@@ -132,6 +182,11 @@ async fn run() -> Result<(), Error> {
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
+
+                println!("Pod: {:?}",
+                    KubernetesMetric::from_pod_json(pod.clone())
+                );
+
                 extract_pod_metrics(
                     pod,
                     pod["podRef"]["name"]
