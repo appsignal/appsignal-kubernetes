@@ -60,8 +60,8 @@ impl Eq for AppsignalMetricKey {}
 
 #[derive(Debug)]
 struct KubernetesMetric {
-    metric_type: String,
-    name: String,
+    node_name: Option<String>,
+    pod_name: Option<String>,
     cpu_usage_nano_cores: Option<u64>,
     cpu_usage_core_nano_seconds: Option<u64>,
     memory_available_bytes: Option<u64>,
@@ -95,8 +95,8 @@ struct KubernetesMetric {
 impl KubernetesMetric {
     pub fn from_node_json(json: serde_json::Value) -> KubernetesMetric {
         KubernetesMetric {
-            metric_type: "node".to_string(),
-            name: json["nodeName"].to_string(),
+            node_name: Some(json["nodeName"].to_string()),
+            pod_name: None,
             cpu_usage_nano_cores: json["cpu"]["usageNanoCores"].as_u64(),
             cpu_usage_core_nano_seconds: json["cpu"]["usageCoreNanoSeconds"].as_u64(),
             memory_available_bytes: json["memory"]["availableBytes"].as_u64(),
@@ -128,10 +128,10 @@ impl KubernetesMetric {
         }
     }
 
-    pub fn from_pod_json(json: serde_json::Value) -> KubernetesMetric {
+    pub fn from_pod_json(node_name: String, json: serde_json::Value) -> KubernetesMetric {
         KubernetesMetric {
-            metric_type: "pod".to_string(),
-            name: json["podRef"]["name"].to_string(),
+            node_name: Some(node_name),
+            pod_name: Some(json["podRef"]["name"].to_string()),
             cpu_usage_nano_cores: json["cpu"]["usageNanoCores"].as_u64(),
             cpu_usage_core_nano_seconds: json["cpu"]["usageCoreNanoSeconds"].as_u64(),
             memory_available_bytes: None,
@@ -235,7 +235,13 @@ fn extract_metrics(kube_response: &Value, out: &mut HashSet<AppsignalMetricKey>)
 
     if let Some(pods) = kube_response["pods"].as_array() {
         for pod in pods {
-            println!("Pod: {:?}", KubernetesMetric::from_pod_json(pod.clone()));
+            println!(
+                "Pod: {:?}",
+                KubernetesMetric::from_pod_json(
+                    kube_response["node"]["nodeName"].to_string(),
+                    pod.clone()
+                )
+            );
 
             let pod_name = extract_pod_metrics(pod, out);
 
