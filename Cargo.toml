@@ -13,3 +13,4 @@ kube = { version = "0.89", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.21", features = ["latest"] }
 http = "1.0"
 serde = "*"
+protobuf = "3.5.0"

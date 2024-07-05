@@ -1,6 +1,6 @@
 TAG=$(shell git describe --tags --abbrev=0 | tr --delete a-z)
 
-.PHONY: build push setup
+.PHONY: build push setup protocol
 
 build:
 	docker buildx build \
@@ -20,3 +20,7 @@ push:
 
 setup:
 	docker buildx create --name appsignal-container --driver=docker-container
+
+protocol:
+	mkdir -p protocol
+	protoc -I ../appsignal-protocol --rust_out=protocol ../appsignal-protocol/kubernetes.proto

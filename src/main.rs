@@ -8,6 +8,10 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 
+include!("../protocol/kubernetes.rs");
+
+use kubernetes::KubernetesMetric;
+
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[derive(Serialize, PartialEq, Debug)]
@@ -43,39 +47,39 @@ impl AppsignalMetric {
     }
 }
 
-#[derive(Debug)]
-struct KubernetesMetric {
-    node_name: Option<String>,
-    pod_name: Option<String>,
-    cpu_usage_nano_cores: Option<u64>,
-    cpu_usage_core_nano_seconds: Option<u64>,
-    memory_available_bytes: Option<u64>,
-    memory_usage_bytes: Option<u64>,
-    memory_working_set_bytes: Option<u64>,
-    memory_rss_bytes: Option<u64>,
-    memory_page_faults: Option<u64>,
-    memory_major_page_faults: Option<u64>,
-    network_rx_bytes: Option<u64>,
-    network_rx_errors: Option<u64>,
-    network_tx_bytes: Option<u64>,
-    network_tx_errors: Option<u64>,
-    fs_available_bytes: Option<u64>,
-    fs_capacity_bytes: Option<u64>,
-    fs_used_bytes: Option<u64>,
-    fs_inodes_free: Option<u64>,
-    fs_inodes: Option<u64>,
-    fs_inodes_used: Option<u64>,
-    rlimit_maxpid: Option<u64>,
-    rlimit_curproc: Option<u64>,
-    ephemeral_storage_available_bytes: Option<u64>,
-    ephemeral_storage_capacity_bytes: Option<u64>,
-    ephemeral_storage_used_bytes: Option<u64>,
-    ephemeral_storage_inodes_free: Option<u64>,
-    ephemeral_storage_inodes: Option<u64>,
-    ephemeral_storage_inodes_used: Option<u64>,
-    process_count: Option<u64>,
-    swap_usage_bytes: Option<u64>,
-}
+// #[derive(Debug)]
+// struct KubernetesMetric {
+//     node_name: Option<String>,
+//     pod_name: Option<String>,
+//     cpu_usage_nano_cores: Option<u64>,
+//     cpu_usage_core_nano_seconds: Option<u64>,
+//     memory_available_bytes: Option<u64>,
+//     memory_usage_bytes: Option<u64>,
+//     memory_working_set_bytes: Option<u64>,
+//     memory_rss_bytes: Option<u64>,
+//     memory_page_faults: Option<u64>,
+//     memory_major_page_faults: Option<u64>,
+//     network_rx_bytes: Option<u64>,
+//     network_rx_errors: Option<u64>,
+//     network_tx_bytes: Option<u64>,
+//     network_tx_errors: Option<u64>,
+//     fs_available_bytes: Option<u64>,
+//     fs_capacity_bytes: Option<u64>,
+//     fs_used_bytes: Option<u64>,
+//     fs_inodes_free: Option<u64>,
+//     fs_inodes: Option<u64>,
+//     fs_inodes_used: Option<u64>,
+//     rlimit_maxpid: Option<u64>,
+//     rlimit_curproc: Option<u64>,
+//     ephemeral_storage_available_bytes: Option<u64>,
+//     ephemeral_storage_capacity_bytes: Option<u64>,
+//     ephemeral_storage_used_bytes: Option<u64>,
+//     ephemeral_storage_inodes_free: Option<u64>,
+//     ephemeral_storage_inodes: Option<u64>,
+//     ephemeral_storage_inodes_used: Option<u64>,
+//     process_count: Option<u64>,
+//     swap_usage_bytes: Option<u64>,
+// }
 
 impl KubernetesMetric {
     pub fn from_node_json(json: serde_json::Value) -> KubernetesMetric {
