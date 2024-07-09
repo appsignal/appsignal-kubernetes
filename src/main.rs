@@ -77,11 +77,11 @@ impl KubernetesMetric {
         }
 
         if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
-            metric.set_memory_page_faults(memory_page_faults);
+            metric.set_memory_page_faults(memory_page_faults as i32);
         }
 
         if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
-            metric.set_memory_major_page_faults(memory_major_page_faults);
+            metric.set_memory_major_page_faults(memory_major_page_faults as i32);
         }
 
         if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
@@ -89,7 +89,7 @@ impl KubernetesMetric {
         }
 
         if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
-            metric.set_network_rx_errors(network_rx_errors);
+            metric.set_network_rx_errors(network_rx_errors as i32);
         }
 
         if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
@@ -97,7 +97,7 @@ impl KubernetesMetric {
         }
 
         if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
-            metric.set_network_tx_errors(network_tx_errors);
+            metric.set_network_tx_errors(network_tx_errors as i32);
         }
 
         if let Some(fs_available_bytes) = json["fs"]["availableBytes"].as_i64() {
@@ -125,11 +125,11 @@ impl KubernetesMetric {
         }
 
         if let Some(rlimit_maxpid) = json["rlimit"]["maxpid"].as_i64() {
-            metric.set_rlimit_maxpid(rlimit_maxpid);
+            metric.set_rlimit_maxpid(rlimit_maxpid as i32);
         }
 
         if let Some(rlimit_curproc) = json["rlimit"]["curproc"].as_i64() {
-            metric.set_rlimit_curproc(rlimit_curproc);
+            metric.set_rlimit_curproc(rlimit_curproc as i32);
         }
 
         if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
@@ -166,11 +166,11 @@ impl KubernetesMetric {
         }
 
         if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
-            metric.set_memory_page_faults(memory_page_faults);
+            metric.set_memory_page_faults(memory_page_faults as i32);
         }
 
         if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
-            metric.set_memory_major_page_faults(memory_major_page_faults);
+            metric.set_memory_major_page_faults(memory_major_page_faults as i32);
         }
 
         if let Some(ephemeral_storage_available_bytes) =
@@ -207,7 +207,7 @@ impl KubernetesMetric {
         }
 
         if let Some(process_count) = json["process_stats"]["process_count"].as_i64() {
-            metric.set_process_count(process_count);
+            metric.set_process_count(process_count as i32);
         }
 
         if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {

@@ -34,27 +34,27 @@ pub struct KubernetesMetric {
     pub memory_usage_bytes: i64,
     pub memory_working_set_bytes: i64,
     pub memory_rss_bytes: i64,
-    pub memory_page_faults: i64,
-    pub memory_major_page_faults: i64,
+    pub memory_page_faults: i32,
+    pub memory_major_page_faults: i32,
     pub network_rx_bytes: i64,
-    pub network_rx_errors: i64,
+    pub network_rx_errors: i32,
     pub network_tx_bytes: i64,
-    pub network_tx_errors: i64,
+    pub network_tx_errors: i32,
     pub fs_available_bytes: i64,
     pub fs_capacity_bytes: i64,
     pub fs_used_bytes: i64,
     pub fs_inodes_free: i64,
     pub fs_inodes: i64,
     pub fs_inodes_used: i64,
-    pub rlimit_maxpid: i64,
-    pub rlimit_curproc: i64,
+    pub rlimit_maxpid: i32,
+    pub rlimit_curproc: i32,
     pub ephemeral_storage_available_bytes: i64,
     pub ephemeral_storage_capacity_bytes: i64,
     pub ephemeral_storage_used_bytes: i64,
     pub ephemeral_storage_inodes_free: i64,
     pub ephemeral_storage_inodes: i64,
     pub ephemeral_storage_inodes_used: i64,
-    pub process_count: i64,
+    pub process_count: i32,
     pub swap_usage_bytes: i64,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -214,10 +214,10 @@ impl KubernetesMetric {
         self.memory_rss_bytes = v;
     }
 
-    // int64 memory_page_faults = 9;
+    // int32 memory_page_faults = 9;
 
 
-    pub fn get_memory_page_faults(&self) -> i64 {
+    pub fn get_memory_page_faults(&self) -> i32 {
         self.memory_page_faults
     }
     pub fn clear_memory_page_faults(&mut self) {
@@ -225,14 +225,14 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_memory_page_faults(&mut self, v: i64) {
+    pub fn set_memory_page_faults(&mut self, v: i32) {
         self.memory_page_faults = v;
     }
 
-    // int64 memory_major_page_faults = 10;
+    // int32 memory_major_page_faults = 10;
 
 
-    pub fn get_memory_major_page_faults(&self) -> i64 {
+    pub fn get_memory_major_page_faults(&self) -> i32 {
         self.memory_major_page_faults
     }
     pub fn clear_memory_major_page_faults(&mut self) {
@@ -240,7 +240,7 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_memory_major_page_faults(&mut self, v: i64) {
+    pub fn set_memory_major_page_faults(&mut self, v: i32) {
         self.memory_major_page_faults = v;
     }
 
@@ -259,10 +259,10 @@ impl KubernetesMetric {
         self.network_rx_bytes = v;
     }
 
-    // int64 network_rx_errors = 12;
+    // int32 network_rx_errors = 12;
 
 
-    pub fn get_network_rx_errors(&self) -> i64 {
+    pub fn get_network_rx_errors(&self) -> i32 {
         self.network_rx_errors
     }
     pub fn clear_network_rx_errors(&mut self) {
@@ -270,7 +270,7 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_network_rx_errors(&mut self, v: i64) {
+    pub fn set_network_rx_errors(&mut self, v: i32) {
         self.network_rx_errors = v;
     }
 
@@ -289,10 +289,10 @@ impl KubernetesMetric {
         self.network_tx_bytes = v;
     }
 
-    // int64 network_tx_errors = 14;
+    // int32 network_tx_errors = 14;
 
 
-    pub fn get_network_tx_errors(&self) -> i64 {
+    pub fn get_network_tx_errors(&self) -> i32 {
         self.network_tx_errors
     }
     pub fn clear_network_tx_errors(&mut self) {
@@ -300,7 +300,7 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_network_tx_errors(&mut self, v: i64) {
+    pub fn set_network_tx_errors(&mut self, v: i32) {
         self.network_tx_errors = v;
     }
 
@@ -394,10 +394,10 @@ impl KubernetesMetric {
         self.fs_inodes_used = v;
     }
 
-    // int64 rlimit_maxpid = 21;
+    // int32 rlimit_maxpid = 21;
 
 
-    pub fn get_rlimit_maxpid(&self) -> i64 {
+    pub fn get_rlimit_maxpid(&self) -> i32 {
         self.rlimit_maxpid
     }
     pub fn clear_rlimit_maxpid(&mut self) {
@@ -405,14 +405,14 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_rlimit_maxpid(&mut self, v: i64) {
+    pub fn set_rlimit_maxpid(&mut self, v: i32) {
         self.rlimit_maxpid = v;
     }
 
-    // int64 rlimit_curproc = 22;
+    // int32 rlimit_curproc = 22;
 
 
-    pub fn get_rlimit_curproc(&self) -> i64 {
+    pub fn get_rlimit_curproc(&self) -> i32 {
         self.rlimit_curproc
     }
     pub fn clear_rlimit_curproc(&mut self) {
@@ -420,7 +420,7 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_rlimit_curproc(&mut self, v: i64) {
+    pub fn set_rlimit_curproc(&mut self, v: i32) {
         self.rlimit_curproc = v;
     }
 
@@ -514,10 +514,10 @@ impl KubernetesMetric {
         self.ephemeral_storage_inodes_used = v;
     }
 
-    // int64 process_count = 29;
+    // int32 process_count = 29;
 
 
-    pub fn get_process_count(&self) -> i64 {
+    pub fn get_process_count(&self) -> i32 {
         self.process_count
     }
     pub fn clear_process_count(&mut self) {
@@ -525,7 +525,7 @@ impl KubernetesMetric {
     }
 
     // Param is passed by value, moved
-    pub fn set_process_count(&mut self, v: i64) {
+    pub fn set_process_count(&mut self, v: i32) {
         self.process_count = v;
     }
 
@@ -606,14 +606,14 @@ impl ::protobuf::Message for KubernetesMetric {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.memory_page_faults = tmp;
                 },
                 10 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.memory_major_page_faults = tmp;
                 },
                 11 => {
@@ -627,7 +627,7 @@ impl ::protobuf::Message for KubernetesMetric {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.network_rx_errors = tmp;
                 },
                 13 => {
@@ -641,7 +641,7 @@ impl ::protobuf::Message for KubernetesMetric {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.network_tx_errors = tmp;
                 },
                 15 => {
@@ -690,14 +690,14 @@ impl ::protobuf::Message for KubernetesMetric {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.rlimit_maxpid = tmp;
                 },
                 22 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.rlimit_curproc = tmp;
                 },
                 23 => {
@@ -746,7 +746,7 @@ impl ::protobuf::Message for KubernetesMetric {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_int64()?;
+                    let tmp = is.read_int32()?;
                     self.process_count = tmp;
                 },
                 30 => {
@@ -889,22 +889,22 @@ impl ::protobuf::Message for KubernetesMetric {
             os.write_int64(8, self.memory_rss_bytes)?;
         }
         if self.memory_page_faults != 0 {
-            os.write_int64(9, self.memory_page_faults)?;
+            os.write_int32(9, self.memory_page_faults)?;
         }
         if self.memory_major_page_faults != 0 {
-            os.write_int64(10, self.memory_major_page_faults)?;
+            os.write_int32(10, self.memory_major_page_faults)?;
         }
         if self.network_rx_bytes != 0 {
             os.write_int64(11, self.network_rx_bytes)?;
         }
         if self.network_rx_errors != 0 {
-            os.write_int64(12, self.network_rx_errors)?;
+            os.write_int32(12, self.network_rx_errors)?;
         }
         if self.network_tx_bytes != 0 {
             os.write_int64(13, self.network_tx_bytes)?;
         }
         if self.network_tx_errors != 0 {
-            os.write_int64(14, self.network_tx_errors)?;
+            os.write_int32(14, self.network_tx_errors)?;
         }
         if self.fs_available_bytes != 0 {
             os.write_int64(15, self.fs_available_bytes)?;
@@ -925,10 +925,10 @@ impl ::protobuf::Message for KubernetesMetric {
             os.write_int64(20, self.fs_inodes_used)?;
         }
         if self.rlimit_maxpid != 0 {
-            os.write_int64(21, self.rlimit_maxpid)?;
+            os.write_int32(21, self.rlimit_maxpid)?;
         }
         if self.rlimit_curproc != 0 {
-            os.write_int64(22, self.rlimit_curproc)?;
+            os.write_int32(22, self.rlimit_curproc)?;
         }
         if self.ephemeral_storage_available_bytes != 0 {
             os.write_int64(23, self.ephemeral_storage_available_bytes)?;
@@ -949,7 +949,7 @@ impl ::protobuf::Message for KubernetesMetric {
             os.write_int64(28, self.ephemeral_storage_inodes_used)?;
         }
         if self.process_count != 0 {
-            os.write_int64(29, self.process_count)?;
+            os.write_int32(29, self.process_count)?;
         }
         if self.swap_usage_bytes != 0 {
             os.write_int64(30, self.swap_usage_bytes)?;
@@ -1032,12 +1032,12 @@ impl ::protobuf::Message for KubernetesMetric {
                 |m: &KubernetesMetric| { &m.memory_rss_bytes },
                 |m: &mut KubernetesMetric| { &mut m.memory_rss_bytes },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "memory_page_faults",
                 |m: &KubernetesMetric| { &m.memory_page_faults },
                 |m: &mut KubernetesMetric| { &mut m.memory_page_faults },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "memory_major_page_faults",
                 |m: &KubernetesMetric| { &m.memory_major_page_faults },
                 |m: &mut KubernetesMetric| { &mut m.memory_major_page_faults },
@@ -1047,7 +1047,7 @@ impl ::protobuf::Message for KubernetesMetric {
                 |m: &KubernetesMetric| { &m.network_rx_bytes },
                 |m: &mut KubernetesMetric| { &mut m.network_rx_bytes },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "network_rx_errors",
                 |m: &KubernetesMetric| { &m.network_rx_errors },
                 |m: &mut KubernetesMetric| { &mut m.network_rx_errors },
@@ -1057,7 +1057,7 @@ impl ::protobuf::Message for KubernetesMetric {
                 |m: &KubernetesMetric| { &m.network_tx_bytes },
                 |m: &mut KubernetesMetric| { &mut m.network_tx_bytes },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "network_tx_errors",
                 |m: &KubernetesMetric| { &m.network_tx_errors },
                 |m: &mut KubernetesMetric| { &mut m.network_tx_errors },
@@ -1092,12 +1092,12 @@ impl ::protobuf::Message for KubernetesMetric {
                 |m: &KubernetesMetric| { &m.fs_inodes_used },
                 |m: &mut KubernetesMetric| { &mut m.fs_inodes_used },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "rlimit_maxpid",
                 |m: &KubernetesMetric| { &m.rlimit_maxpid },
                 |m: &mut KubernetesMetric| { &mut m.rlimit_maxpid },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "rlimit_curproc",
                 |m: &KubernetesMetric| { &m.rlimit_curproc },
                 |m: &mut KubernetesMetric| { &mut m.rlimit_curproc },
@@ -1132,7 +1132,7 @@ impl ::protobuf::Message for KubernetesMetric {
                 |m: &KubernetesMetric| { &m.ephemeral_storage_inodes_used },
                 |m: &mut KubernetesMetric| { &mut m.ephemeral_storage_inodes_used },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
                 "process_count",
                 |m: &KubernetesMetric| { &m.process_count },
                 |m: &mut KubernetesMetric| { &mut m.process_count },
@@ -1214,19 +1214,19 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x12memory_usage_bytes\x18\x06\x20\x01(\x03R\x10memoryUsageBytes\x127\
     \n\x18memory_working_set_bytes\x18\x07\x20\x01(\x03R\x15memoryWorkingSet\
     Bytes\x12(\n\x10memory_rss_bytes\x18\x08\x20\x01(\x03R\x0ememoryRssBytes\
-    \x12,\n\x12memory_page_faults\x18\t\x20\x01(\x03R\x10memoryPageFaults\
-    \x127\n\x18memory_major_page_faults\x18\n\x20\x01(\x03R\x15memoryMajorPa\
+    \x12,\n\x12memory_page_faults\x18\t\x20\x01(\x05R\x10memoryPageFaults\
+    \x127\n\x18memory_major_page_faults\x18\n\x20\x01(\x05R\x15memoryMajorPa\
     geFaults\x12(\n\x10network_rx_bytes\x18\x0b\x20\x01(\x03R\x0enetworkRxBy\
-    tes\x12*\n\x11network_rx_errors\x18\x0c\x20\x01(\x03R\x0fnetworkRxErrors\
+    tes\x12*\n\x11network_rx_errors\x18\x0c\x20\x01(\x05R\x0fnetworkRxErrors\
     \x12(\n\x10network_tx_bytes\x18\r\x20\x01(\x03R\x0enetworkTxBytes\x12*\n\
-    \x11network_tx_errors\x18\x0e\x20\x01(\x03R\x0fnetworkTxErrors\x12,\n\
+    \x11network_tx_errors\x18\x0e\x20\x01(\x05R\x0fnetworkTxErrors\x12,\n\
     \x12fs_available_bytes\x18\x0f\x20\x01(\x03R\x10fsAvailableBytes\x12*\n\
     \x11fs_capacity_bytes\x18\x10\x20\x01(\x03R\x0ffsCapacityBytes\x12\"\n\r\
     fs_used_bytes\x18\x11\x20\x01(\x03R\x0bfsUsedBytes\x12$\n\x0efs_inodes_f\
     ree\x18\x12\x20\x01(\x03R\x0cfsInodesFree\x12\x1b\n\tfs_inodes\x18\x13\
     \x20\x01(\x03R\x08fsInodes\x12$\n\x0efs_inodes_used\x18\x14\x20\x01(\x03\
-    R\x0cfsInodesUsed\x12#\n\rrlimit_maxpid\x18\x15\x20\x01(\x03R\x0crlimitM\
-    axpid\x12%\n\x0erlimit_curproc\x18\x16\x20\x01(\x03R\rrlimitCurproc\x12I\
+    R\x0cfsInodesUsed\x12#\n\rrlimit_maxpid\x18\x15\x20\x01(\x05R\x0crlimitM\
+    axpid\x12%\n\x0erlimit_curproc\x18\x16\x20\x01(\x05R\rrlimitCurproc\x12I\
     \n!ephemeral_storage_available_bytes\x18\x17\x20\x01(\x03R\x1eephemeralS\
     torageAvailableBytes\x12G\n\x20ephemeral_storage_capacity_bytes\x18\x18\
     \x20\x01(\x03R\x1dephemeralStorageCapacityBytes\x12?\n\x1cephemeral_stor\
@@ -1235,7 +1235,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     ageInodesFree\x128\n\x18ephemeral_storage_inodes\x18\x1b\x20\x01(\x03R\
     \x16ephemeralStorageInodes\x12A\n\x1dephemeral_storage_inodes_used\x18\
     \x1c\x20\x01(\x03R\x1aephemeralStorageInodesUsed\x12#\n\rprocess_count\
-    \x18\x1d\x20\x01(\x03R\x0cprocessCount\x12(\n\x10swap_usage_bytes\x18\
+    \x18\x1d\x20\x01(\x05R\x0cprocessCount\x12(\n\x10swap_usage_bytes\x18\
     \x1e\x20\x01(\x03R\x0eswapUsageBytesJ\xa6\r\n\x06\x12\x04\0\0\"\x01\n\
     \x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\n\x01\x02\x12\x03\x01\0\x1c\n\n\n\
     \x02\x04\0\x12\x04\x03\0\"\x01\n\n\n\x03\x04\0\x01\x12\x03\x03\x08\x18\n\
