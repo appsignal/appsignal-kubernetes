@@ -236,16 +236,12 @@ async fn run() -> Result<(), Error> {
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
-    let mut bytes = Vec::new();
-
     for metric in metrics {
-        let mut metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
-        bytes.append(&mut metric_bytes);
+        let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
+        let appsignal_response = reqwest_client.post(url.clone()).body(metric_bytes).send().await?;
+
+        println!("Done: {:?}", appsignal_response);
     }
-
-    let appsignal_response = reqwest_client.post(url).body(bytes.clone()).send().await?;
-
-    println!("Done: {:?}", appsignal_response);
 
     Ok(())
 }
