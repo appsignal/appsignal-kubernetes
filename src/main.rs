@@ -1,6 +1,9 @@
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
+use protobuf::Message;
+use reqwest::{Client, Url};
+use std::env;
 use std::time::Duration;
 
 include!("../protocol/mod.rs");
@@ -194,7 +197,7 @@ async fn run() -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
-    let mut body = Vec::new();
+    let mut metrics = Vec::new();
 
     for node in nodes {
         let name = node.name_any();
@@ -206,7 +209,7 @@ async fn run() -> Result<(), Error> {
             .await?;
 
         let node_metric = KubernetesMetric::from_node_json(kube_response["node"].clone());
-        body.push(node_metric.clone());
+        metrics.push(node_metric.clone());
 
         println!("Node: {:?}", node_metric);
 
@@ -217,12 +220,32 @@ async fn run() -> Result<(), Error> {
                     pod.clone(),
                 );
 
-                body.push(pod_metric.clone());
+                metrics.push(pod_metric.clone());
 
                 println!("Pod: {:?}", pod_metric);
             }
         };
     }
+
+    let endpoint =
+        env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
+    let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
+    let base = Url::parse(&endpoint).expect("Could not parse endpoint");
+    let path = format!("metrics/kubernetes?api_key={}", api_key);
+    let url = base.join(&path).expect("Could not build request URL");
+
+    let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+
+    let mut bytes = Vec::new();
+
+    for metric in metrics {
+        let mut metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
+        bytes.append(&mut metric_bytes);
+    }
+
+    let appsignal_response = reqwest_client.post(url).body(bytes.clone()).send().await?;
+
+    println!("Done: {:?}", appsignal_response);
 
     Ok(())
 }
