@@ -1,6 +1,7 @@
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
+use log::{debug, trace};
 use protobuf::Message;
 use reqwest::{Client, Url};
 use std::env;
@@ -184,6 +185,7 @@ impl KubernetesMetric {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    env_logger::init();
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
 
@@ -211,8 +213,6 @@ async fn run() -> Result<(), Error> {
         let node_metric = KubernetesMetric::from_node_json(kube_response["node"].clone());
         metrics.push(node_metric.clone());
 
-        println!("Node: {:?}", node_metric);
-
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
                 let pod_metric = KubernetesMetric::from_pod_json(
@@ -222,7 +222,7 @@ async fn run() -> Result<(), Error> {
 
                 metrics.push(pod_metric.clone());
 
-                println!("Pod: {:?}", pod_metric);
+                trace!("Pod: {:?}", pod_metric);
             }
         };
     }
@@ -240,7 +240,7 @@ async fn run() -> Result<(), Error> {
         let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
         let appsignal_response = reqwest_client.post(url.clone()).body(metric_bytes).send().await?;
 
-        println!("Done: {:?}", appsignal_response);
+        debug!("Metric sent: {:?}", appsignal_response);
     }
 
     Ok(())
