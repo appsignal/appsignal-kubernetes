@@ -238,7 +238,11 @@ async fn run() -> Result<(), Error> {
 
     for metric in metrics {
         let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
-        let appsignal_response = reqwest_client.post(url.clone()).body(metric_bytes).send().await?;
+        let appsignal_response = reqwest_client
+            .post(url.clone())
+            .body(metric_bytes)
+            .send()
+            .await?;
 
         debug!("Metric sent: {:?}", appsignal_response);
     }
@@ -248,9 +252,9 @@ async fn run() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_eq;
     use crate::KubernetesMetric;
     use serde_json::json;
+    use std::assert_eq;
 
     #[test]
     fn extract_node_metrics_with_empty_results() {
