@@ -249,3 +249,54 @@ async fn run() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::assert_eq;
+    use crate::KubernetesMetric;
+    use serde_json::json;
+
+    #[test]
+    fn extract_node_metrics_with_empty_results() {
+        let metric = KubernetesMetric::from_node_json(json!([]));
+
+        assert_eq!("null", metric.node_name);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_results() {
+        let metric = KubernetesMetric::from_node_json(json!({
+          "cpu": {
+           "time": "2024-03-29T12:21:36Z",
+           "usageNanoCores": 232839439,
+           "usageCoreNanoSeconds": 1118592000000 as u64
+          },
+        }));
+
+        assert_eq!(232839439, metric.cpu_usage_nano_cores);
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_empty_results() {
+        let metric = KubernetesMetric::from_pod_json("node".to_string(), json!([]));
+
+        assert_eq!("node", metric.node_name);
+        assert_eq!("null", metric.pod_name);
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_results() {
+        let metric = KubernetesMetric::from_pod_json(
+            "node".to_string(),
+            json!({
+              "cpu": {
+               "time": "2024-03-29T12:21:36Z",
+               "usageNanoCores": 232839439,
+               "usageCoreNanoSeconds": 1118592000000 as u64
+              },
+            }),
+        );
+
+        assert_eq!(232839439, metric.cpu_usage_nano_cores);
+    }
+}
