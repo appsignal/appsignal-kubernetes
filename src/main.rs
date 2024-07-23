@@ -194,6 +194,7 @@ async fn run() -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
+    let mut body = Vec::new();
 
     for node in nodes {
         let name = node.name_any();
@@ -204,23 +205,23 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request.clone())
             .await?;
 
-        println!(
-            "Node: {:?}",
-            KubernetesMetric::from_node_json(kube_response["node"].clone())
-        );
+        let node_metric = KubernetesMetric::from_node_json(kube_response["node"].clone());
+        body.push(node_metric.clone());
+
+        println!("Node: {:?}", node_metric);
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                println!(
-                    "Pod: {:?}",
-                    KubernetesMetric::from_pod_json(
-                        kube_response["node"]["nodeName"].to_string(),
-                        pod.clone()
-                    )
+                let pod_metric = KubernetesMetric::from_pod_json(
+                    kube_response["node"]["nodeName"].to_string(),
+                    pod.clone(),
                 );
+
+                body.push(pod_metric.clone());
+
+                println!("Pod: {:?}", pod_metric);
             }
         };
-
     }
 
     Ok(())
