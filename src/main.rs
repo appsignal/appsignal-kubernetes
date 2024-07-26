@@ -18,6 +18,8 @@ impl KubernetesMetric {
         let mut metric = KubernetesMetric::new();
         metric.set_node_name(json["nodeName"].to_string());
 
+        metric.set_timestamp(now_timestamp());
+
         if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
             metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
         }
@@ -110,6 +112,8 @@ impl KubernetesMetric {
 
         metric.set_node_name(node_name);
         metric.set_pod_name(json["podRef"]["name"].to_string());
+
+        metric.set_timestamp(now_timestamp());
 
         if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
             metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
@@ -248,6 +252,10 @@ async fn run() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn now_timestamp() -> i64 {
+    time::now_utc().to_timespec().sec
 }
 
 #[cfg(test)]
