@@ -299,14 +299,20 @@ mod tests {
         let metric = KubernetesMetric::from_pod_json(
             "node".to_string(),
             json!({
+              "podRef": {
+                "name": "kube-proxy-db7k4",
+                "namespace": "kube-system",
+                "uid": "3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8"
+              },
               "cpu": {
-               "time": "2024-03-29T12:21:36Z",
-               "usageNanoCores": 232839439,
-               "usageCoreNanoSeconds": 1118592000000 as u64
+                "time": "2024-03-29T12:21:36Z",
+                "usageNanoCores": 232839439,
+                "usageCoreNanoSeconds": 1118592000000 as u64
               },
             }),
         );
 
+        assert_eq!("node", metric.node_name);
         assert_eq!(232839439, metric.cpu_usage_nano_cores);
         assert_eq!(1118592000000, metric.cpu_usage_core_nano_seconds);
     }
