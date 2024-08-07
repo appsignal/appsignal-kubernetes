@@ -308,5 +308,6 @@ mod tests {
         );
 
         assert_eq!(232839439, metric.cpu_usage_nano_cores);
+        assert_eq!(1118592000000, metric.cpu_usage_core_nano_seconds);
     }
 }
