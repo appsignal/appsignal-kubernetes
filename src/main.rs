@@ -113,7 +113,11 @@ impl KubernetesMetric {
         let mut metric = KubernetesMetric::new();
 
         metric.set_node_name(node_name);
-        metric.set_pod_name(json["podRef"]["name"].to_string());
+
+        if let Some(name) = json["podRef"]["name"].as_str() {
+            metric.set_pod_name(name.to_string());
+        }
+
 
         metric.set_timestamp(now_timestamp());
 
@@ -291,7 +295,7 @@ mod tests {
         let metric = KubernetesMetric::from_pod_json("node".to_string(), json!([]));
 
         assert_eq!("node", metric.node_name);
-        assert_eq!("null", metric.pod_name);
+        assert_eq!("", metric.pod_name);
     }
 
     #[test]
