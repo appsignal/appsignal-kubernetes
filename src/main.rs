@@ -118,6 +118,13 @@ impl KubernetesMetric {
             metric.set_pod_name(name.to_string());
         }
 
+        if let Some(namespace) = json["podRef"]["namespace"].as_str() {
+            metric.set_pod_namespace(namespace.to_string());
+        }
+
+        if let Some(uid) = json["podRef"]["uid"].as_str() {
+            metric.set_pod_uuid(uid.to_string());
+        }
 
         metric.set_timestamp(now_timestamp());
 
@@ -317,6 +324,9 @@ mod tests {
         );
 
         assert_eq!("node", metric.node_name);
+        assert_eq!("kube-proxy-db7k4", metric.pod_name);
+        assert_eq!("kube-system", metric.pod_namespace);
+        assert_eq!("3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8", metric.pod_uuid);
         assert_eq!(232839439, metric.cpu_usage_nano_cores);
         assert_eq!(1118592000000, metric.cpu_usage_core_nano_seconds);
     }
