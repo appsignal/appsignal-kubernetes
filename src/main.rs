@@ -11,13 +11,13 @@ use std::time::Duration;
 
 include!("../protocol/mod.rs");
 
-use kubernetes::KubernetesMetric;
+use kubernetes::KubernetesMetrics;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-impl KubernetesMetric {
-    pub fn from_node_json(json: serde_json::Value) -> KubernetesMetric {
-        let mut metric = KubernetesMetric::new();
+impl KubernetesMetrics {
+    pub fn from_node_json(json: serde_json::Value) -> KubernetesMetrics {
+        let mut metric = KubernetesMetrics::new();
         metric.set_node_name(json["nodeName"].to_string());
 
         metric.set_timestamp(now_timestamp());
@@ -109,8 +109,8 @@ impl KubernetesMetric {
         metric
     }
 
-    pub fn from_pod_json(node_name: String, json: serde_json::Value) -> KubernetesMetric {
-        let mut metric = KubernetesMetric::new();
+    pub fn from_pod_json(node_name: String, json: serde_json::Value) -> KubernetesMetrics {
+        let mut metric = KubernetesMetrics::new();
 
         metric.set_node_name(node_name);
 
@@ -227,14 +227,14 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request.clone())
             .await?;
 
-        let node_metric = KubernetesMetric::from_node_json(kube_response["node"].clone());
+        let node_metric = KubernetesMetrics::from_node_json(kube_response["node"].clone());
         metrics.push(node_metric.clone());
 
         trace!("Node: {:?}", node_metric);
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                let pod_metric = KubernetesMetric::from_pod_json(
+                let pod_metric = KubernetesMetrics::from_pod_json(
                     kube_response["node"]["nodeName"].to_string(),
                     pod.clone(),
                 );
@@ -275,20 +275,20 @@ fn now_timestamp() -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::KubernetesMetric;
+    use crate::KubernetesMetrics;
     use serde_json::json;
     use std::assert_eq;
 
     #[test]
     fn extract_node_metrics_with_empty_results() {
-        let metric = KubernetesMetric::from_node_json(json!([]));
+        let metric = KubernetesMetrics::from_node_json(json!([]));
 
         assert_eq!("null", metric.node_name);
     }
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let metric = KubernetesMetric::from_node_json(json!({
+        let metric = KubernetesMetrics::from_node_json(json!({
           "cpu": {
            "time": "2024-03-29T12:21:36Z",
            "usageNanoCores": 232839439,
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_empty_results() {
-        let metric = KubernetesMetric::from_pod_json("node".to_string(), json!([]));
+        let metric = KubernetesMetrics::from_pod_json("node".to_string(), json!([]));
 
         assert_eq!("node", metric.node_name);
         assert_eq!("", metric.pod_name);
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let metric = KubernetesMetric::from_pod_json(
+        let metric = KubernetesMetrics::from_pod_json(
             "node".to_string(),
             json!({
               "podRef": {
