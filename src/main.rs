@@ -230,6 +230,8 @@ async fn run() -> Result<(), Error> {
         let node_metric = KubernetesMetric::from_node_json(kube_response["node"].clone());
         metrics.push(node_metric.clone());
 
+        trace!("Node: {:?}", node_metric);
+
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
                 let pod_metric = KubernetesMetric::from_pod_json(
