@@ -16,7 +16,7 @@ spec:
       containers:
       - name: appsignal-kubernetes
         image: appsignal/appsignal-kubernetes:0.1.0
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: APPSIGNAL_API_KEY
           valueFrom:
