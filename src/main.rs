@@ -187,7 +187,7 @@ fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<Appsignal
             &results["node"]["fs"]["availableBytes"],
         ),
         (
-            "node_s_capacity_bytes",
+            "node_fs_capacity_bytes",
             &results["node"]["fs"]["capacityBytes"],
         ),
         ("node_fs_used_bytes", &results["node"]["fs"]["usedBytes"]),
