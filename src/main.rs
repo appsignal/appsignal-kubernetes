@@ -17,7 +17,7 @@ type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 struct AppsignalMetric {
     name: String,
     metric_type: String,
-    value: f32,
+    value: f64,
     tags: BTreeMap<String, String>,
 }
 
@@ -30,7 +30,7 @@ impl AppsignalMetric {
         value.as_f64().map(|value| Self {
             name: metric_name.to_string(),
             metric_type: "gauge".to_string(),
-            value: value as f32,
+            value: value as f64,
             tags,
         })
     }
@@ -610,5 +610,23 @@ mod tests {
         );
 
         assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn serialize_metrics() {
+        let mut out = HashSet::new();
+        out.insert(
+            AppsignalMetric::new(
+                "some_metric",
+                BTreeMap::from([("some_key".to_string(), "some_value".to_string())]),
+                &json!(123456789),
+            )
+            .expect("Could not create metric")
+            .to_key(),
+        );
+
+        let json = serde_json::to_string(&out).expect("Could not serialize JSON");
+
+        assert_eq!(json, "[{\"name\":\"some_metric\",\"metricType\":\"gauge\",\"value\":123456789.0,\"tags\":{\"some_key\":\"some_value\"}}]");
     }
 }
