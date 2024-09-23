@@ -38,16 +38,26 @@ impl AppsignalMetric {
 async fn main() {
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
+    let metrics_url = must_metrics_url_from_env();
 
     loop {
         interval.tick().await;
-        if let Err(error) = run().await {
+        if let Err(error) = run(&metrics_url).await {
             eprintln!("Failed to extract metrics: {}", &error);
         };
     }
 }
 
-async fn run() -> Result<(), Error> {
+fn must_metrics_url_from_env() -> Url {
+    let endpoint =
+        env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
+    let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
+    let base = Url::parse(&endpoint).expect("Could not parse endpoint");
+    let path = format!("metrics/json?api_key={}", api_key);
+    base.join(&path).expect("Could not build request URL")
+}
+
+async fn run(metrics_url: &Url) -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
@@ -66,17 +76,10 @@ async fn run() -> Result<(), Error> {
 
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
 
-    let endpoint =
-        env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
-    let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
-    let base = Url::parse(&endpoint).expect("Could not parse endpoint");
-    let path = format!("metrics/json?api_key={}", api_key);
-    let url = base.join(&path).expect("Could not build request URL");
-
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
     let appsignal_response = reqwest_client
-        .post(url)
+        .post(metrics_url.clone())
         .body(json.to_owned())
         .send()
         .await?;
