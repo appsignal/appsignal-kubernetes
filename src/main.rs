@@ -78,6 +78,18 @@ async fn run() -> Result<(), Error> {
                         .expect("Could not extract pod name"),
                     &mut out,
                 );
+
+                if let Some(volumes) = pod["volume"].as_array() {
+                    for volume in volumes {
+                        extract_volume_metrics(
+                            volume,
+                            volume["name"]
+                                .as_str()
+                                .expect("Could not extract volume name"),
+                            &mut out,
+                        );
+                    }
+                }
             }
         };
 
@@ -211,12 +223,24 @@ fn extract_node_metrics(results: Value, node_name: &str, out: &mut Vec<Appsignal
     }
 }
 
+fn extract_volume_metrics(results: &Value, volume_name: &str, out: &mut Vec<AppsignalMetric>) {
+    for (metric_name, metric_value) in [
+        ("volume_available_bytes", &results["availableBytes"]),
+        ("volume_capacity_bytes", &results["capacityBytes"]),
+        ("volume_used_bytes", &results["usedBytes"]),
+        ("volume_inodes_free", &results["inodesFree"]),
+        ("volume_inodes", &results["inodes"]),
+        ("volume_inodes_used", &results["inodesUsed"]),
+    ] {
+        let mut tags = HashMap::with_capacity(1);
+        tags.insert("volume".to_owned(), volume_name.to_owned());
+        out.push(AppsignalMetric::new(metric_name, tags, metric_value));
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::extract_node_metrics;
-    use crate::extract_pod_metrics;
-    use crate::AppsignalMetric;
-    use crate::HashMap;
+    use crate::*;
     use serde_json::json;
 
     #[test]
@@ -293,6 +317,41 @@ mod tests {
             AppsignalMetric::new(
                 "pod_cpu_usage_nano_cores",
                 HashMap::from([("pod".to_string(), "pod".to_string())]),
+                &json!(232839439)
+            ),
+            out[0]
+        );
+    }
+
+    #[test]
+    fn extract_volume_metrics_with_empty_results() {
+        let mut out = Vec::new();
+        extract_volume_metrics(&json!([]), "volume", &mut out);
+        assert_eq!(
+            AppsignalMetric::new(
+                "volume_fs_available_bytes",
+                HashMap::from([("pod".to_string(), "volume".to_string())]),
+                &json!(0.0)
+            ),
+            out[0]
+        );
+    }
+
+    #[test]
+    fn extract_volume_metrics_with_results() {
+        let mut out = Vec::new();
+        extract_volume_metrics(
+            &json!({
+              "availableBytes": 232839439
+            }),
+            "volume",
+            &mut out,
+        );
+
+        assert_eq!(
+            AppsignalMetric::new(
+                "volume_available_bytes",
+                HashMap::from([("volume".to_string(), "volume".to_string())]),
                 &json!(232839439)
             ),
             out[0]
