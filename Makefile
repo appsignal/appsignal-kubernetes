@@ -1,4 +1,4 @@
-TAG=$(shell git describe --tags --abbrev=0 | tr --delete a-z)
+TAG=$(shell git describe --tags --abbrev=0 | tr -d v)
 
 .PHONY: build push setup
 
