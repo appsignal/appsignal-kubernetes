@@ -5,6 +5,7 @@ TAG=$(shell git describe --tags --abbrev=0 | tr -d v)
 build:
 	docker buildx build \
           --builder=appsignal-container \
+          --load \
           --tag appsignal/appsignal-kubernetes:$(TAG) \
           --tag appsignal/appsignal-kubernetes:latest \
           .
