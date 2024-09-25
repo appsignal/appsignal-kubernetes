@@ -98,6 +98,8 @@ async fn run(metrics_url: &Url) -> Result<(), Error> {
         extract_metrics(&kube_response, &mut out);
     }
 
+    let metrics_count = out.len();
+
     let json = serde_json::to_string(&out).expect("Could not serialize JSON");
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
@@ -108,7 +110,11 @@ async fn run(metrics_url: &Url) -> Result<(), Error> {
         .send()
         .await?;
 
-    println!("Done: {:?}", appsignal_response);
+    println!(
+        "Sent {} metrics to AppSignal: status code {:?}",
+        metrics_count,
+        appsignal_response.status()
+    );
 
     Ok(())
 }
