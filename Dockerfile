@@ -1,10 +1,8 @@
-FROM rust:alpine
+FROM alpine:3.20.3
 
-RUN apk add --no-cache clang libressl-dev
+ENV REFRESHED_AT=2024-09-25
 
-RUN --mount=type=bind,source=src,target=src \
-    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
-    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    cargo build --release
+ARG TARGETARCH
+COPY release/$TARGETARCH-unknown-linux-musl/appsignal-kubernetes /appsignal-kubernetes
 
-CMD ["/target/release/appsignal-kubernetes"]
+CMD ["/appsignal-kubernetes"]
