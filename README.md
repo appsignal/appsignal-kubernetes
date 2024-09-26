@@ -56,6 +56,17 @@ It extracts the following metrics from the `/api/v1/nodes/<NODE>/proxy/stats/sum
 After installing AppSignal for Kubernetes into a cluster, an Automated Dashboard automatically appears on AppSignal showing you an overview of the nodes in your Kubernetes cluster.
 The reported metrics can also be used to create custom dashboards through the [Dashboard and Graph Builder](https://appsignal.com/redirect-to/app?to=dashboard&overlay=dashboardForm).
 
+## Development
+
+### Publish new releases
+
+To publish a new release, follow these steps:
+
+- Tag a new release in Git: `git tag vx.x.x`
+- Run the publish task: `make push`
+
+The last tag will used as the new version published to the [appsignal/appsignal-kubernetes](https://hub.docker.com/repository/docker/appsignal/appsignal-kubernetes/tags) image on Docker Hub.
+
 ## Support
 
 Please don't hesitate to [contact us](mailto:support@appsignal.com) if we can assist you in getting AppSignal for Kubernetes setup.
