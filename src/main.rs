@@ -124,18 +124,18 @@ fn extract_metrics(kube_response: &Value, out: &mut HashSet<AppsignalMetricKey>)
 
     if let Some(pods) = kube_response["pods"].as_array() {
         for pod in pods {
-            extract_pod_metrics(pod, out);
+            let pod_name = extract_pod_metrics(pod, out);
 
-            if let Some(volumes) = pod["volume"].as_array() {
+            if let (Some(pod_name), Some(volumes)) = (pod_name, pod["volume"].as_array()) {
                 for volume in volumes {
-                    extract_volume_metrics(volume, out);
+                    extract_volume_metrics(volume, &pod_name, out);
                 }
             }
         }
     };
 }
 
-fn extract_volume_metrics(results: &Value, out: &mut HashSet<AppsignalMetricKey>) {
+fn extract_volume_metrics(results: &Value, pod_name: &str, out: &mut HashSet<AppsignalMetricKey>) {
     let volume_name = if let Some(name) = results["name"].as_str() {
         name
     } else {
@@ -152,6 +152,7 @@ fn extract_volume_metrics(results: &Value, out: &mut HashSet<AppsignalMetricKey>
         ("volume_inodes_used", &results["inodesUsed"]),
     ] {
         let mut tags = BTreeMap::new();
+        tags.insert("pod".to_owned(), pod_name.to_owned());
         tags.insert("volume".to_owned(), volume_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
@@ -160,12 +161,15 @@ fn extract_volume_metrics(results: &Value, out: &mut HashSet<AppsignalMetricKey>
     }
 }
 
-fn extract_pod_metrics(pod_results: &Value, out: &mut HashSet<AppsignalMetricKey>) {
+fn extract_pod_metrics(
+    pod_results: &Value,
+    out: &mut HashSet<AppsignalMetricKey>,
+) -> Option<String> {
     let pod_name = if let Some(name) = pod_results["podRef"]["name"].as_str() {
         name
     } else {
         eprintln!("Could not extract pod name");
-        return;
+        return None;
     };
 
     for (metric_name, metric_value) in [
@@ -197,6 +201,8 @@ fn extract_pod_metrics(pod_results: &Value, out: &mut HashSet<AppsignalMetricKey
             out.insert(metric.to_key());
         }
     }
+
+    return Some(pod_name.to_owned());
 }
 
 fn extract_node_metrics(node_results: &Value, out: &mut HashSet<AppsignalMetricKey>) {
@@ -376,7 +382,10 @@ mod tests {
             &out,
             AppsignalMetric::new(
                 "volume_available_bytes",
-                BTreeMap::from([("volume".to_string(), "some_volume".to_string())]),
+                BTreeMap::from([
+                    ("pod".to_string(), "other_pod".to_string()),
+                    ("volume".to_string(), "some_volume".to_string()),
+                ]),
                 &json!(444444444),
             )
             .expect("Could not create metric"),
@@ -385,53 +394,11 @@ mod tests {
             &out,
             AppsignalMetric::new(
                 "volume_available_bytes",
-                BTreeMap::from([("volume".to_string(), "other_volume".to_string())]),
+                BTreeMap::from([
+                    ("pod".to_string(), "other_pod".to_string()),
+                    ("volume".to_string(), "other_volume".to_string()),
+                ]),
                 &json!(555555555),
-            )
-            .expect("Could not create metric"),
-        );
-    }
-
-    #[test]
-    fn extract_metrics_repeated_volume() {
-        let mut out = HashSet::new();
-        extract_metrics(
-            &json!({
-              "pods": [
-                {
-                  "podRef": {
-                      "name": "some_pod"
-                  },
-                  "volume": [
-                    {
-                      "name": "some_volume",
-                      "availableBytes": 444444444,
-                    },
-                  ],
-                },
-                {
-                  "podRef": {
-                      "name": "other_pod"
-                  },
-                  "volume": [
-                    {
-                      "name": "some_volume",
-                      "availableBytes": 444444444,
-                    },
-                  ],
-                },
-              ],
-            }),
-            &mut out,
-        );
-
-        assert_eq!(out.len(), 1);
-        assert_contains_metric(
-            &out,
-            AppsignalMetric::new(
-                "volume_available_bytes",
-                BTreeMap::from([("volume".to_string(), "some_volume".to_string())]),
-                &json!(444444444),
             )
             .expect("Could not create metric"),
         );
@@ -564,7 +531,7 @@ mod tests {
     #[test]
     fn extract_volume_metrics_without_results() {
         let mut out: HashSet<AppsignalMetricKey, _> = HashSet::new();
-        extract_volume_metrics(&json!({}), &mut out);
+        extract_volume_metrics(&json!({}), "some_pod", &mut out);
 
         assert_eq!(out.len(), 0);
     }
@@ -577,6 +544,7 @@ mod tests {
               "availableBytes": 232839439,
               "capacityBytes": 1118592000000 as u64,
             }),
+            "some_pod",
             &mut out,
         );
 
@@ -592,6 +560,7 @@ mod tests {
               "availableBytes": 232839439,
               "capacityBytes": 1118592000000 as u64,
             }),
+            "some_pod",
             &mut out,
         );
 
@@ -599,7 +568,10 @@ mod tests {
             &out,
             AppsignalMetric::new(
                 "volume_available_bytes",
-                BTreeMap::from([("volume".to_string(), "some_volume".to_string())]),
+                BTreeMap::from([
+                    ("pod".to_string(), "some_pod".to_string()),
+                    ("volume".to_string(), "some_volume".to_string()),
+                ]),
                 &json!(232839439),
             )
             .expect("Could not create metric"),
@@ -609,7 +581,10 @@ mod tests {
             &out,
             AppsignalMetric::new(
                 "volume_capacity_bytes",
-                BTreeMap::from([("volume".to_string(), "some_volume".to_string())]),
+                BTreeMap::from([
+                    ("pod".to_string(), "some_pod".to_string()),
+                    ("volume".to_string(), "some_volume".to_string()),
+                ]),
                 &json!(1118592000000 as u64),
             )
             .expect("Could not create metric"),
