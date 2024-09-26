@@ -1,4 +1,4 @@
-FROM rust:alpine
+FROM rust:1.75.0-alpine3.19
 
 RUN apk add --no-cache clang libressl-dev
 
