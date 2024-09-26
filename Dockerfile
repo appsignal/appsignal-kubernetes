@@ -9,6 +9,6 @@ RUN --mount=type=bind,source=src,target=src \
 
 FROM alpine:3.20.3
 
-COPY --from=build /target/release/appsignal-kubernetes /target/release/appsignal-kubernetes
+COPY --from=build /target/release/appsignal-kubernetes /appsignal-kubernetes
 
-CMD ["/target/release/appsignal-kubernetes"]
+CMD ["/appsignal-kubernetes"]
