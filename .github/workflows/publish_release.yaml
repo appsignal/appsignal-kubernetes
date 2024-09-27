@@ -3,6 +3,10 @@ on:
   # Trigger this release via the GitHub Actions interface for this workflow
   workflow_dispatch:
 
+env:
+  PUBLISH_GIT_USERNAME: "AppSignal release bot"
+  PUBLISH_GIT_EMAIL: "support+build-sign@appsignal.com"
+
 jobs:
   publish:
     name: "Publish the release"
@@ -18,6 +22,11 @@ jobs:
         with:
           repository: "appsignal/mono"
           path: "tmp/mono"
+
+      - name: "Configure Git"
+        run: |
+          git config --global user.name "$PUBLISH_GIT_USERNAME (as ${{github.actor}})"
+          git config --global user.email "$PUBLISH_GIT_EMAIL"
 
       - name: "Create version"
         id: version
