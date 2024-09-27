@@ -1,8 +1,13 @@
-#!/bin/sh
+#!/usr/bin/env ruby
+# frozen_string_literal: true
 
-set -eu
+VERSION=ARGV[0]
 
-VERSION=$1
-
-sed -i '' -e 's/^version = ".*"$/version = "'$VERSION'"/' Cargo.toml
-sed -i '' -e 's|image: appsignal/appsignal-kubernetes:.*$|image: appsignal/appsignal-kubernetes:'$VERSION'|' deployment.yaml
+File.write(
+  "Cargo.toml",
+  File.read("Cargo.toml").sub(/^version = ".*"$/, %(version = "#{VERSION}"))
+)
+File.write(
+  "deployment.yaml",
+  File.read("deployment.yaml").sub(/image: appsignal\/appsignal-kubernetes:.*$/, "image: appsignal/appsignal-kubernetes:#{VERSION}")
+)
