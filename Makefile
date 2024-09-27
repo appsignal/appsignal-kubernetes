@@ -1,4 +1,4 @@
-TAG=$(shell ./script/read_version.sh)
+TAG=$(shell ./script/read_version)
 PLATFORMS ?= "linux/amd64,linux/arm64"
 
 .PHONY: build push setup
