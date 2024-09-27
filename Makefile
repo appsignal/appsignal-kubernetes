@@ -1,4 +1,4 @@
-TAG=$(shell git describe --tags --abbrev=0 | tr -d v)
+TAG=$(shell ./script/read_version.sh)
 
 .PHONY: build push setup
 
