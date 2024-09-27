@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 VERSION=$1
 
 sed -i '' -e 's/^version = ".*"$/version = "'$VERSION'"/' Cargo.toml
