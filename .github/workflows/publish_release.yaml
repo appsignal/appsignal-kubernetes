@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: "Checkout the project"
         uses: actions/checkout@v4
+        with:
+          ssh-key: "${{secrets.PUBLISH_DEPLOY_KEY}}"
 
       - name: "Checkout Mono"
         uses: actions/checkout@v4
