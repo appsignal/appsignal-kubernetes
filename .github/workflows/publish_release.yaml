@@ -51,3 +51,6 @@ jobs:
             --tag appsignal/appsignal-kubernetes:${{steps.version.outputs.RELEASE_VERSION}} \
             --tag appsignal/appsignal-kubernetes:latest \
             .
+
+      - name: "Push release to repository"
+        run: git push origin ${{github.ref_name}} "v${{steps.version.outputs.RELEASE_VERSION}}"
