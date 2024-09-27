@@ -1,10 +1,11 @@
 TAG=$(shell ./script/read_version.sh)
+PLATFORMS ?= "linux/amd64,linux/arm64"
 
 .PHONY: build push setup
 
 build:
 	docker buildx build \
-          --platform linux/amd64,linux/arm64 \
+          --platform $(PLATFORMS) \
           --builder=appsignal-container \
           --load \
           --tag appsignal/appsignal-kubernetes:$(TAG) \
