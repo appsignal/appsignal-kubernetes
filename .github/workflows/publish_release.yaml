@@ -16,3 +16,8 @@ jobs:
         with:
           repository: "appsignal/mono"
           path: "tmp/mono"
+
+      - name: "Create version"
+        id: version
+        run: |
+          tmp/mono/bin/mono publish --no-git --no-package-push --yes
