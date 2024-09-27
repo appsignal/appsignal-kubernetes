@@ -21,3 +21,14 @@ jobs:
         id: version
         run: |
           tmp/mono/bin/mono publish --no-git --no-package-push --yes
+
+          export RELEASE_VERSION="$(script/read_version)"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: "Git commit changes"
+        run: |
+          git add .
+          git commit \
+            --message "Release version ${{steps.version.outputs.RELEASE_VERSION}}" \
+            --message "Update version number and CHANGELOG.md."
+          git tag "v${{steps.version.outputs.RELEASE_VERSION}}"
