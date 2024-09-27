@@ -10,3 +10,9 @@ jobs:
     steps:
       - name: "Checkout the project"
         uses: actions/checkout@v4
+
+      - name: "Checkout Mono"
+        uses: actions/checkout@v4
+        with:
+          repository: "appsignal/mono"
+          path: "tmp/mono"
