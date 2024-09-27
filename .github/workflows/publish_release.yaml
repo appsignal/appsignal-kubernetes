@@ -2,3 +2,11 @@ name: Publish a release
 on:
   # Trigger this release via the GitHub Actions interface for this workflow
   workflow_dispatch:
+
+jobs:
+  publish:
+    name: "Publish the release"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: "Checkout the project"
+        uses: actions/checkout@v4
