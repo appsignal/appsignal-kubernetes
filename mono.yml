@@ -4,7 +4,7 @@ repo: "https://github.com/appsignal/appsignal-kubernetes"
 build:
   command: "make build"
 publish:
-  command: "make push"
+  command: "echo 'Can only publish from GitHub Actions'"
 test:
   command: "cargo test"
 
