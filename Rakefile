@@ -46,7 +46,13 @@ namespace :build do
   end
 
   desc "Prepare for builds"
-  task :prepare => ["prepare:buildx", "prepare:cross"]
+  task :prepare => [:cleanup, "prepare:buildx", "prepare:cross"]
+
+  desc "Clean up release artifacts"
+  task :cleanup do
+    FileUtils.rm_rf(RELEASE_DIR)
+    FileUtils.mkdir(RELEASE_DIR)
+  end
 
   namespace :target do
     TARGETS.each do |target_triple, config|
