@@ -1,3 +1,5 @@
+$stdout.sync = true
+
 DOCKER_IMAGE_NAME = "appsignal/appsignal-kubernetes".freeze
 BUILDX_NAME = "appsignal-kubernetes-builder".freeze
 RELEASE_DIR = "release".freeze
