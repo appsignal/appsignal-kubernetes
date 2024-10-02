@@ -84,4 +84,21 @@ namespace :build do
     desc "Build all release artifacts"
     task :all => TARGETS.keys
   end
+
+  desc "Build local image"
+  task :image => "build:target:all" do
+    tag = "#{DOCKER_IMAGE_NAME}:local"
+    platforms = TARGETS.values.map { |config| config[:docker_platform] }
+    options = [
+      "--builder=#{BUILDX_NAME}",
+      "--file=Dockerfile",
+      "--platform=#{platforms.join(",")}",
+      "--tag #{tag}",
+      "--load"
+    ]
+    Command.run("docker buildx build #{options.join(" ")} .")
+
+    puts
+    puts "Built image '#{tag}'"
+  end
 end
