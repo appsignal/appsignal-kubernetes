@@ -11,6 +11,3 @@ build:
           --tag appsignal/appsignal-kubernetes:$(TAG) \
           --tag appsignal/appsignal-kubernetes:latest \
           .
-
-setup:
-	docker buildx create --name appsignal-container --driver=docker-container

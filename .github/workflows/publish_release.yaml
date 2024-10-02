@@ -50,9 +50,6 @@ jobs:
           username: ${{secrets.PUBLISH_DOCKERHUB_USERNAME}}
           password: ${{secrets.PUBLISH_DOCKERHUB_TOKEN}}
 
-      - name: "Set up Docker buildx"
-        run: make setup
-
       - name: "Build and publish to Docker Hub"
         run: |
           docker buildx build \
