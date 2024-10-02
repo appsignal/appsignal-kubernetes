@@ -54,6 +54,10 @@ namespace :build do
     FileUtils.mkdir(RELEASE_DIR)
   end
 
+  task :remove_buildx do
+    Command.run("docker buildx rm appsignal-container")
+  end
+
   namespace :target do
     TARGETS.each do |target_triple, config|
       desc "Build #{target_triple} release artifact"
