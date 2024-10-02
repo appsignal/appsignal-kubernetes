@@ -35,8 +35,8 @@ impl AppsignalMetric {
         })
     }
 
-    pub fn to_key(self) -> AppsignalMetricKey {
-        AppsignalMetricKey(self)
+    pub fn to_key(&self) -> AppsignalMetricKey {
+        AppsignalMetricKey(self.clone())
     }
 }
 
