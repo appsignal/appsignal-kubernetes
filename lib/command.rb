@@ -5,7 +5,8 @@ module Command
     read, write = IO.pipe
     options = { [:out, :err] => write }
 
-    pid = spawn(env, "set -eux; #{command}", options)
+    print_cmd_flag = "x" if output
+    pid = spawn(env, "set -eu#{print_cmd_flag}; #{command}", options)
     output_lines = []
     thread =
       Thread.new do

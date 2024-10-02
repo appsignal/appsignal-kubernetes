@@ -102,3 +102,25 @@ namespace :build do
     puts "Built image '#{tag}'"
   end
 end
+
+desc "Publish the Docker image"
+task :publish => "build:target:all" do
+  tag = "#{DOCKER_IMAGE_NAME}:#{current_version}"
+  platforms = TARGETS.values.map { |config| config[:docker_platform] }
+  options = [
+    "--builder=#{BUILDX_NAME}",
+    "--file=Dockerfile",
+    "--platform=#{platforms.join(",")}",
+    "--tag #{DOCKER_IMAGE_NAME}:latest",
+    "--tag #{tag}"
+  ]
+  options << "--push" unless ENV["PUBLISH_DRY_RUN"]
+  Command.run("docker buildx build #{options.join(" ")} .")
+
+  puts
+  puts "Published images '#{tag}' and 'latest'"
+end
+
+def current_version
+  Command.run("script/read_version", :output => false).strip
+end

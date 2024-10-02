@@ -51,14 +51,7 @@ jobs:
           password: ${{secrets.PUBLISH_DOCKERHUB_TOKEN}}
 
       - name: "Build and publish to Docker Hub"
-        run: |
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --builder=appsignal-container \
-            --push \
-            --tag appsignal/appsignal-kubernetes:${{steps.version.outputs.RELEASE_VERSION}} \
-            --tag appsignal/appsignal-kubernetes:latest \
-            .
+        run: rake publish
 
       - name: "Push release to repository"
         run: git push origin ${{github.ref_name}} "v${{steps.version.outputs.RELEASE_VERSION}}"
