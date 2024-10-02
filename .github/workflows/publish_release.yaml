@@ -6,6 +6,8 @@ on:
 env:
   PUBLISH_GIT_USERNAME: "AppSignal release bot"
   PUBLISH_GIT_EMAIL: "support+build-sign@appsignal.com"
+  PUBLISH_GIT_SSH_PATH: "/home/runner/.ssh"
+  PUBLISH_GIT_SIGN_KEY_PATH: "/home/runner/.ssh/sign_key"
 
 jobs:
   publish:
@@ -25,8 +27,17 @@ jobs:
 
       - name: "Configure Git"
         run: |
+          mkdir -p "$PUBLISH_GIT_SSH_PATH"
+          echo "${{secrets.PUBLISH_GIT_SIGN_KEY}}" > "$PUBLISH_GIT_SIGN_KEY_PATH"
+          echo "${{secrets.PUBLISH_GIT_SIGN_PUBLIC_KEY}}" > "$PUBLISH_GIT_SIGN_KEY_PATH.pub"
+          chmod 600 "$PUBLISH_GIT_SIGN_KEY_PATH"
           git config --global user.name "$PUBLISH_GIT_USERNAME (as ${{github.actor}})"
           git config --global user.email "$PUBLISH_GIT_EMAIL"
+          git config --global gpg.format ssh
+          git config --global commit.gpgsign true
+          touch ~/.ssh/allowed_signers
+          echo "$(git config --get user.email) namespaces=\"git\" $(cat $PUBLISH_GIT_SIGN_KEY_PATH.pub)" >> ~/.ssh/allowed_signers
+          git config --global user.signingkey "$PUBLISH_GIT_SIGN_KEY_PATH"
 
       - name: "Create version"
         id: version
@@ -40,6 +51,7 @@ jobs:
         run: |
           git add .
           git commit \
+            --gpg-sign \
             --message "Release version ${{steps.version.outputs.RELEASE_VERSION}}" \
             --message "Update version number and CHANGELOG.md."
           git tag "v${{steps.version.outputs.RELEASE_VERSION}}"
