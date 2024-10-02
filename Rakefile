@@ -1,5 +1,19 @@
+DOCKER_IMAGE_NAME = "appsignal/appsignal-kubernetes".freeze
 BUILDX_NAME = "appsignal-kubernetes-builder".freeze
+RELEASE_DIR = "release".freeze
+EXECUTABLE_NAME = "appsignal-kubernetes".freeze
 CROSS_VERSION = "0.2.5".freeze
+
+TARGETS = {
+  "x86_64-unknown-linux-musl" => {
+    :release_triple => "amd64-unknown-linux-musl",
+    :docker_platform => "linux/amd64"
+  },
+  "aarch64-unknown-linux-musl" => {
+    :release_triple => "arm64-unknown-linux-musl",
+    :docker_platform => "linux/arm64"
+  }
+}.freeze
 
 require_relative "lib/command"
 
@@ -33,4 +47,35 @@ namespace :build do
 
   desc "Prepare for builds"
   task :prepare => ["prepare:buildx", "prepare:cross"]
+
+  namespace :target do
+    TARGETS.each do |target_triple, config|
+      desc "Build #{target_triple} release artifact"
+      task target_triple => :prepare do
+        target_dir = "tmp/build/#{target_triple}"
+        release_dir = File.join(RELEASE_DIR, config[:release_triple])
+        FileUtils.mkdir_p(release_dir)
+        env = {
+          # Make sure to always build on amd64 images.
+          # Cross and Docker don't always communicate well and it tries to
+          # fetch arm64 images on ARM hosts.
+          "CROSS_CONTAINER_OPTS" => "--platform linux/amd64",
+          # Tell some dependencies cross compilation is allowed
+          "PKG_CONFIG_ALLOW_CROSS" => "1",
+          # Point to separate target directory so the two builds are isolated
+          "CARGO_TARGET_DIR" => target_dir
+        }
+        # Build the release artifact for the target triple
+        Command.run("cross build --release --target #{target_triple}", :env => env)
+        # Copy the release artifact to the release directory
+        FileUtils.copy(
+          File.join(target_dir, target_triple, "release", EXECUTABLE_NAME),
+          File.join(release_dir, EXECUTABLE_NAME)
+        )
+      end
+    end
+
+    desc "Build all release artifacts"
+    task :all => TARGETS.keys
+  end
 end
