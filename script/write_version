@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+VERSION=ARGV[0]
+
+File.write(
+  "Cargo.toml",
+  File.read("Cargo.toml").sub(/^version = ".*"$/, %(version = "#{VERSION}"))
+)
+File.write(
+  "deployment.yaml",
+  File.read("deployment.yaml").sub(/image: appsignal\/appsignal-kubernetes:.*$/, "image: appsignal/appsignal-kubernetes:#{VERSION}")
+)

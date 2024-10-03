@@ -1,13 +1,13 @@
 ---
 language: "custom"
-repo: "https://github.com/appsignal/appsignal-kubernetes/"
+repo: "https://github.com/appsignal/appsignal-kubernetes"
 build:
-  command: "make build"
+  command: "echo 'Run make build instead'"
 publish:
-  command: "make push"
+  command: "echo 'Can only publish from GitHub Actions'"
 test:
   command: "cargo test"
 
-read_version: "script/read_version.sh"
-write_version: "script/write_version.sh"
+read_version: "script/read_version"
+write_version: "script/write_version"
 version_scheme: "semver"
