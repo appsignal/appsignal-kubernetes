@@ -62,8 +62,7 @@ The reported metrics can also be used to create custom dashboards through the [D
 
 To publish a new release, follow these steps:
 
-- Tag a new release in Git: `git tag vx.x.x`
-- Run the publish task: `make push`
+- Trigger a new workflow via this [workflow](https://github.com/appsignal/appsignal-kubernetes/actions/workflows/publish_release.yaml).
 
 The last tag will used as the new version published to the [appsignal/appsignal-kubernetes](https://hub.docker.com/repository/docker/appsignal/appsignal-kubernetes/tags) image on Docker Hub.
 
