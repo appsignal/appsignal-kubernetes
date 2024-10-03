@@ -30,13 +30,13 @@ impl AppsignalMetric {
         value.as_f64().map(|value| Self {
             name: metric_name.to_string(),
             metric_type: "gauge".to_string(),
-            value: value as f64,
+            value,
             tags,
         })
     }
 
-    pub fn to_key(self) -> AppsignalMetricKey {
-        AppsignalMetricKey(self)
+    pub fn to_key(&self) -> AppsignalMetricKey {
+        AppsignalMetricKey(self.clone())
     }
 }
 
@@ -202,7 +202,7 @@ fn extract_pod_metrics(
         }
     }
 
-    return Some(pod_name.to_owned());
+    Some(pod_name.to_owned())
 }
 
 fn extract_node_metrics(node_results: &Value, out: &mut HashSet<AppsignalMetricKey>) {
@@ -419,7 +419,7 @@ mod tests {
               "cpu": {
                "time": "2024-03-29T12:21:36Z",
                "usageNanoCores": 232839439,
-               "usageCoreNanoSeconds": 1118592000000 as u64
+               "usageCoreNanoSeconds": 1118592000000_u64
               },
             }),
             &mut out,
@@ -437,7 +437,7 @@ mod tests {
               "cpu": {
                "time": "2024-03-29T12:21:36Z",
                "usageNanoCores": 232839439,
-               "usageCoreNanoSeconds": 1118592000000 as u64
+               "usageCoreNanoSeconds": 1118592000000_u64
               },
             }),
             &mut out,
@@ -457,7 +457,7 @@ mod tests {
             AppsignalMetric::new(
                 "node_cpu_usage_core_nano_seconds",
                 BTreeMap::from([("node".to_string(), "some_node".to_string())]),
-                &json!(1118592000000 as u64),
+                &json!(1118592000000_u64),
             )
             .expect("Could not create metric"),
         );
@@ -480,7 +480,7 @@ mod tests {
               "cpu": {
                "time": "2024-03-29T12:21:36Z",
                "usageNanoCores": 232839439,
-               "usageCoreNanoSeconds": 1118592000000 as u64
+               "usageCoreNanoSeconds": 1118592000000_u64
               },
             }),
             &mut out,
@@ -500,7 +500,7 @@ mod tests {
               "cpu": {
                "time": "2024-03-29T12:21:36Z",
                "usageNanoCores": 232839439,
-               "usageCoreNanoSeconds": 1118592000000 as u64
+               "usageCoreNanoSeconds": 1118592000000_u64
               },
             }),
             &mut out,
@@ -520,7 +520,7 @@ mod tests {
             AppsignalMetric::new(
                 "pod_cpu_usage_core_nano_seconds",
                 BTreeMap::from([("pod".to_string(), "some_pod".to_string())]),
-                &json!(1118592000000 as u64),
+                &json!(1118592000000_u64),
             )
             .expect("Could not create metric"),
         );
@@ -542,7 +542,7 @@ mod tests {
         extract_volume_metrics(
             &json!({
               "availableBytes": 232839439,
-              "capacityBytes": 1118592000000 as u64,
+              "capacityBytes": 1118592000000_u64,
             }),
             "some_pod",
             &mut out,
@@ -558,7 +558,7 @@ mod tests {
             &json!({
               "name": "some_volume",
               "availableBytes": 232839439,
-              "capacityBytes": 1118592000000 as u64,
+              "capacityBytes": 1118592000000_u64,
             }),
             "some_pod",
             &mut out,
@@ -585,7 +585,7 @@ mod tests {
                     ("pod".to_string(), "some_pod".to_string()),
                     ("volume".to_string(), "some_volume".to_string()),
                 ]),
-                &json!(1118592000000 as u64),
+                &json!(1118592000000_u64),
             )
             .expect("Could not create metric"),
         );
