@@ -198,6 +198,42 @@ impl KubernetesMetrics {
         }
         metric
     }
+
+    pub fn from_volume_json(node_name: String, json: serde_json::Value) -> KubernetesMetrics {
+        let mut metric = KubernetesMetrics::new();
+
+        metric.set_node_name(node_name);
+
+        if let Some(name) = json["name"].as_str() {
+            metric.set_volume_name(name.to_string());
+        }
+
+        if let Some(fs_available_bytes) = json["availableBytes"].as_i64() {
+            metric.set_fs_available_bytes(fs_available_bytes);
+        }
+
+        if let Some(fs_capacity_bytes) = json["capacityBytes"].as_i64() {
+            metric.set_fs_capacity_bytes(fs_capacity_bytes);
+        }
+
+        if let Some(fs_used_bytes) = json["usedBytes"].as_i64() {
+            metric.set_fs_used_bytes(fs_used_bytes);
+        }
+
+        if let Some(fs_inodes_free) = json["inodesFree"].as_i64() {
+            metric.set_fs_inodes_free(fs_inodes_free);
+        }
+
+        if let Some(fs_inodes) = json["inodes"].as_i64() {
+            metric.set_fs_inodes(fs_inodes);
+        }
+
+        if let Some(fs_inodes_used) = json["inodesUsed"].as_i64() {
+            metric.set_fs_inodes_used(fs_inodes_used);
+        }
+
+        metric
+    }
 }
 
 #[tokio::main]
@@ -227,6 +263,8 @@ async fn run() -> Result<(), Error> {
             .request::<serde_json::Value>(kube_request.clone())
             .await?;
 
+        trace!("JSON: {:?}", kube_response);
+
         let node_metric = KubernetesMetrics::from_node_json(kube_response["node"].clone());
         metrics.push(node_metric.clone());
 
@@ -242,6 +280,19 @@ async fn run() -> Result<(), Error> {
                 metrics.push(pod_metric.clone());
 
                 trace!("Pod: {:?}", pod_metric);
+
+                if let Some(volumes) = pod["volume"].as_array() {
+                    for volume in volumes {
+                        let volume_metric = KubernetesMetrics::from_volume_json(
+                            kube_response["node"]["nodeName"].to_string(),
+                            volume.clone(),
+                        );
+
+                        metrics.push(volume_metric.clone());
+
+                        trace!("Volume: {:?}", volume_metric);
+                    }
+                }
             }
         };
     }
@@ -331,5 +382,34 @@ mod tests {
         assert_eq!("3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8", metric.pod_uuid);
         assert_eq!(232839439, metric.cpu_usage_nano_cores);
         assert_eq!(1118592000000, metric.cpu_usage_core_nano_seconds);
+    }
+
+    #[test]
+    fn extract_volume_metrics_with_empty_results() {
+        let metric = KubernetesMetrics::from_volume_json("node".to_string(), json!([]));
+
+        assert_eq!("node", metric.node_name);
+        assert_eq!("", metric.volume_name);
+    }
+
+    #[test]
+    fn extract_volume_metrics_with_results() {
+        let metric = KubernetesMetrics::from_volume_json(
+            "node".to_string(),
+            json!({
+                "time": "2024-10-08T13:42:48Z",
+                "availableBytes": 8318251008 as u64,
+                "capacityBytes": 8318263296 as u64,
+                "usedBytes": 12288,
+                "inodesFree": 1015404,
+                "inodes": 1015413,
+                "inodesUsed": 9,
+                "name": "kube-api-access-qz4b4"
+            }),
+        );
+
+        assert_eq!("node", metric.node_name);
+        assert_eq!("kube-api-access-qz4b4", metric.volume_name);
+        assert_eq!(8318251008, metric.fs_available_bytes);
     }
 }
