@@ -35,8 +35,8 @@ impl AppsignalMetric {
         })
     }
 
-    pub fn to_key(&self) -> AppsignalMetricKey {
-        AppsignalMetricKey(self.clone())
+    pub fn into_key(self) -> AppsignalMetricKey {
+        AppsignalMetricKey(self)
     }
 }
 
@@ -156,7 +156,7 @@ fn extract_volume_metrics(results: &Value, pod_name: &str, out: &mut HashSet<App
         tags.insert("volume".to_owned(), volume_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            out.insert(metric.to_key());
+            out.insert(metric.into_key());
         }
     }
 }
@@ -198,7 +198,7 @@ fn extract_pod_metrics(
         tags.insert("pod".to_owned(), pod_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            out.insert(metric.to_key());
+            out.insert(metric.into_key());
         }
     }
 
@@ -280,7 +280,7 @@ fn extract_node_metrics(node_results: &Value, out: &mut HashSet<AppsignalMetricK
         tags.insert("node".to_owned(), node_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            out.insert(metric.to_key());
+            out.insert(metric.into_key());
         }
     }
 }
@@ -291,7 +291,7 @@ mod tests {
     use serde_json::json;
 
     fn assert_contains_metric(out: &HashSet<AppsignalMetricKey>, metric: AppsignalMetric) {
-        if let Some(out_metric) = out.get(&metric.clone().to_key()) {
+        if let Some(out_metric) = out.get(&metric.clone().into_key()) {
             assert_eq!(out_metric.0, metric);
         } else {
             panic!("Metric not found: {:?}", &metric);
@@ -603,7 +603,7 @@ mod tests {
                 &json!(123456789),
             )
             .expect("Could not create metric")
-            .to_key(),
+            .into_key(),
         );
 
         let json = serde_json::to_string(&out).expect("Could not serialize JSON");
