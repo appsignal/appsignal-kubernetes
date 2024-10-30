@@ -62,11 +62,10 @@ impl Eq for AppsignalMetricKey {}
 async fn main() {
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
-    let metrics_url = must_metrics_url_from_env();
 
     loop {
         interval.tick().await;
-        if let Err(error) = run(&metrics_url).await {
+        if let Err(error) = run().await {
             eprintln!("Failed to extract metrics: {}", &error);
         };
     }
@@ -81,7 +80,7 @@ fn must_metrics_url_from_env() -> Url {
     base.join(&path).expect("Could not build request URL")
 }
 
-async fn run(metrics_url: &Url) -> Result<(), Error> {
+async fn run() -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
@@ -105,7 +104,7 @@ async fn run(metrics_url: &Url) -> Result<(), Error> {
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
     let appsignal_response = reqwest_client
-        .post(metrics_url.clone())
+        .post(must_metrics_url_from_env())
         .body(json.to_owned())
         .send()
         .await?;
