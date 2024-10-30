@@ -4,7 +4,7 @@ use kube::{api::ListParams, Api, ResourceExt};
 use reqwest::{Client, Url};
 use serde::Serialize;
 use serde_json::value::Value;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::time::Duration;
 
@@ -84,7 +84,7 @@ async fn run() -> Result<(), Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
-    let mut out = HashSet::new();
+    let mut out = HashMap::new();
 
     for node in nodes {
         let url = format!("/api/v1/nodes/{}/proxy/stats/summary", node.name_any());
@@ -97,28 +97,31 @@ async fn run() -> Result<(), Error> {
         extract_metrics(&kube_response, &mut out);
     }
 
-    let metrics_count = out.len();
+    for (namespace, metrics) in out {
+        let metrics_count = metrics.len();
 
-    let json = serde_json::to_string(&out).expect("Could not serialize JSON");
+        let json = serde_json::to_string(&metrics).expect("Could not serialize JSON");
 
-    let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+        let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
-    let appsignal_response = reqwest_client
-        .post(must_metrics_url_from_env())
-        .body(json.to_owned())
-        .send()
-        .await?;
+        let appsignal_response = reqwest_client
+            .post(must_metrics_url_from_env())
+            .body(json.to_owned())
+            .send()
+            .await?;
 
-    println!(
-        "Sent {} metrics to AppSignal: status code {:?}",
-        metrics_count,
-        appsignal_response.status()
-    );
+        println!(
+            "Sent {} metrics from the \"{}\" namespace to AppSignal: status code {:?}",
+            metrics_count,
+            namespace,
+            appsignal_response.status()
+        );
+    }
 
     Ok(())
 }
 
-fn extract_metrics(kube_response: &Value, out: &mut HashSet<AppsignalMetricKey>) {
+fn extract_metrics(kube_response: &Value, out: &mut HashMap<String, HashSet<AppsignalMetricKey>>) {
     extract_node_metrics(&kube_response["node"], out);
 
     if let Some(pods) = kube_response["pods"].as_array() {
@@ -134,7 +137,11 @@ fn extract_metrics(kube_response: &Value, out: &mut HashSet<AppsignalMetricKey>)
     };
 }
 
-fn extract_volume_metrics(results: &Value, pod_name: &str, out: &mut HashSet<AppsignalMetricKey>) {
+fn extract_volume_metrics(
+    results: &Value,
+    pod_name: &str,
+    out: &mut HashMap<String, HashSet<AppsignalMetricKey>>,
+) {
     let volume_name = if let Some(name) = results["name"].as_str() {
         name
     } else {
@@ -155,14 +162,15 @@ fn extract_volume_metrics(results: &Value, pod_name: &str, out: &mut HashSet<App
         tags.insert("volume".to_owned(), volume_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            out.insert(metric.into_key());
+            let metrics = out.entry("default".to_string()).or_insert(HashSet::new());
+            metrics.insert(metric.into_key());
         }
     }
 }
 
 fn extract_pod_metrics(
     pod_results: &Value,
-    out: &mut HashSet<AppsignalMetricKey>,
+    out: &mut HashMap<String, HashSet<AppsignalMetricKey>>,
 ) -> Option<String> {
     let pod_name = if let Some(name) = pod_results["podRef"]["name"].as_str() {
         name
@@ -197,14 +205,18 @@ fn extract_pod_metrics(
         tags.insert("pod".to_owned(), pod_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            out.insert(metric.into_key());
+            let metrics = out.entry("default".to_string()).or_insert(HashSet::new());
+            metrics.insert(metric.into_key());
         }
     }
 
     Some(pod_name.to_owned())
 }
 
-fn extract_node_metrics(node_results: &Value, out: &mut HashSet<AppsignalMetricKey>) {
+fn extract_node_metrics(
+    node_results: &Value,
+    out: &mut HashMap<String, HashSet<AppsignalMetricKey>>,
+) {
     let node_name = if let Some(name) = node_results["nodeName"].as_str() {
         name
     } else {
@@ -279,7 +291,8 @@ fn extract_node_metrics(node_results: &Value, out: &mut HashSet<AppsignalMetricK
         tags.insert("node".to_owned(), node_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            out.insert(metric.into_key());
+            let metrics = out.entry("default".to_string()).or_insert(HashSet::new());
+            metrics.insert(metric.into_key());
         }
     }
 }
@@ -299,14 +312,14 @@ mod tests {
 
     #[test]
     fn extract_metrics_without_response() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_metrics(&json!({}), &mut out);
         assert_eq!(out.len(), 0);
     }
 
     #[test]
     fn extract_metrics_with_response() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_metrics(
             &json!({
               "node": {
@@ -349,9 +362,9 @@ mod tests {
             }),
             &mut out,
         );
-        assert_eq!(out.len(), 5);
+        assert_eq!(out.get("default").unwrap().len(), 5);
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "node_cpu_usage_nano_cores",
                 BTreeMap::from([("node".to_string(), "some_node".to_string())]),
@@ -360,7 +373,7 @@ mod tests {
             .expect("Could not create metric"),
         );
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "pod_cpu_usage_nano_cores",
                 BTreeMap::from([("pod".to_string(), "some_pod".to_string())]),
@@ -369,7 +382,7 @@ mod tests {
             .expect("Could not create metric"),
         );
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "pod_cpu_usage_nano_cores",
                 BTreeMap::from([("pod".to_string(), "other_pod".to_string())]),
@@ -378,7 +391,7 @@ mod tests {
             .expect("Could not create metric"),
         );
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "volume_available_bytes",
                 BTreeMap::from([
@@ -390,7 +403,7 @@ mod tests {
             .expect("Could not create metric"),
         );
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "volume_available_bytes",
                 BTreeMap::from([
@@ -405,14 +418,14 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_without_results() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_node_metrics(&json!({}), &mut out);
         assert_eq!(out.len(), 0);
     }
 
     #[test]
     fn extract_node_metrics_missing_name() {
-        let mut out: HashSet<AppsignalMetricKey, _> = HashSet::new();
+        let mut out: HashMap<String, HashSet<AppsignalMetricKey, _>> = HashMap::new();
         extract_node_metrics(
             &json!({
               "cpu": {
@@ -429,7 +442,7 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_node_metrics(
             &json!({
               "nodeName": "some_node",
@@ -443,7 +456,7 @@ mod tests {
         );
 
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "node_cpu_usage_nano_cores",
                 BTreeMap::from([("node".to_string(), "some_node".to_string())]),
@@ -452,7 +465,7 @@ mod tests {
             .expect("Could not create metric"),
         );
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "node_cpu_usage_core_nano_seconds",
                 BTreeMap::from([("node".to_string(), "some_node".to_string())]),
@@ -461,19 +474,19 @@ mod tests {
             .expect("Could not create metric"),
         );
 
-        assert_eq!(out.len(), 2);
+        assert_eq!(out.get("default").unwrap().len(), 2);
     }
 
     #[test]
     fn extract_pod_metrics_without_results() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_pod_metrics(&json!({}), &mut out);
         assert_eq!(out.len(), 0);
     }
 
     #[test]
     fn extract_pod_metrics_missing_name() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_pod_metrics(
             &json!({
               "cpu": {
@@ -490,7 +503,7 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_pod_metrics(
             &json!({
               "podRef": {
@@ -506,7 +519,7 @@ mod tests {
         );
 
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "pod_cpu_usage_nano_cores",
                 BTreeMap::from([("pod".to_string(), "some_pod".to_string())]),
@@ -515,7 +528,7 @@ mod tests {
             .expect("Could not create metric"),
         );
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "pod_cpu_usage_core_nano_seconds",
                 BTreeMap::from([("pod".to_string(), "some_pod".to_string())]),
@@ -524,12 +537,12 @@ mod tests {
             .expect("Could not create metric"),
         );
 
-        assert_eq!(out.len(), 2);
+        assert_eq!(out.get("default").unwrap().len(), 2);
     }
 
     #[test]
     fn extract_volume_metrics_without_results() {
-        let mut out: HashSet<AppsignalMetricKey, _> = HashSet::new();
+        let mut out: HashMap<String, HashSet<AppsignalMetricKey, _>> = HashMap::new();
         extract_volume_metrics(&json!({}), "some_pod", &mut out);
 
         assert_eq!(out.len(), 0);
@@ -537,7 +550,7 @@ mod tests {
 
     #[test]
     fn extract_volume_metrics_missing_name() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_volume_metrics(
             &json!({
               "availableBytes": 232839439,
@@ -552,7 +565,7 @@ mod tests {
 
     #[test]
     fn extract_volume_metrics_with_results() {
-        let mut out = HashSet::new();
+        let mut out = HashMap::new();
         extract_volume_metrics(
             &json!({
               "name": "some_volume",
@@ -564,7 +577,7 @@ mod tests {
         );
 
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "volume_available_bytes",
                 BTreeMap::from([
@@ -577,7 +590,7 @@ mod tests {
         );
 
         assert_contains_metric(
-            &out,
+            &out.get("default").unwrap(),
             AppsignalMetric::new(
                 "volume_capacity_bytes",
                 BTreeMap::from([
@@ -589,12 +602,13 @@ mod tests {
             .expect("Could not create metric"),
         );
 
-        assert_eq!(out.len(), 2);
+        assert_eq!(out.get("default").unwrap().len(), 2);
     }
 
     #[test]
     fn serialize_metrics() {
         let mut out = HashSet::new();
+
         out.insert(
             AppsignalMetric::new(
                 "some_metric",
