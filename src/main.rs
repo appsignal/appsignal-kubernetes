@@ -71,8 +71,25 @@ async fn main() {
     }
 }
 
-fn api_key_for_namespace(_namespace: String) -> String {
-    env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set")
+fn api_key_for_namespace(namespace: String) -> String {
+    let mut api_keys = HashMap::new();
+    let namespace_api_key_map_string =
+        env::var("APPSIGNAL_NAMESPACE_API_KEY_MAP").unwrap_or("".to_owned());
+    let namespace_api_key_map_pairs = namespace_api_key_map_string.split(",").collect::<Vec<&str>>();
+
+    for pair in namespace_api_key_map_pairs {
+        match pair.split_once("=") {
+            Some((key, value)) => {
+                api_keys.insert(key, value);
+            }
+            None => ()
+        }
+    }
+
+    match api_keys.get(namespace.as_str()) {
+        Some(key) => key.to_string(),
+        None => env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set")
+    }
 }
 
 fn metrics_url_for_namespace(namespace: String) -> Url {
