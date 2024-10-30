@@ -71,10 +71,14 @@ async fn main() {
     }
 }
 
-fn must_metrics_url_from_env() -> Url {
+fn api_key_for_namespace(_namespace: String) -> String {
+    env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set")
+}
+
+fn metrics_url_for_namespace(namespace: String) -> Url {
     let endpoint =
         env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
-    let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
+    let api_key = api_key_for_namespace(namespace);
     let base = Url::parse(&endpoint).expect("Could not parse endpoint");
     let path = format!("metrics/json?api_key={}", api_key);
     base.join(&path).expect("Could not build request URL")
@@ -105,7 +109,7 @@ async fn run() -> Result<(), Error> {
         let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
         let appsignal_response = reqwest_client
-            .post(must_metrics_url_from_env())
+            .post(metrics_url_for_namespace(namespace.clone()))
             .body(json.to_owned())
             .send()
             .await?;
