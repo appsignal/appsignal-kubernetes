@@ -124,10 +124,9 @@ async fn run() -> Result<(), Error> {
         let json = serde_json::to_string(&metrics).expect("Could not serialize JSON");
 
         let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
-        let metrics_url = metrics_url_for_namespace(namespace.clone());
 
         let appsignal_response = reqwest_client
-            .post(metrics_url)
+            .post(metrics_url_for_namespace(namespace.clone()))
             .body(json.to_owned())
             .send()
             .await?;

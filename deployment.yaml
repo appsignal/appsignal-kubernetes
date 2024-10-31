@@ -23,6 +23,12 @@ spec:
             secretKeyRef:
               name: appsignal
               key: api-key
+        - name: APPSIGNAL_NAMESPACE_API_KEY_MAP
+          valueFrom:
+            secretKeyRef:
+              name: appsignal
+              key: namespace-api-key-map
+              optional: true
 ---
 apiVersion: v1
 kind: ServiceAccount
