@@ -117,7 +117,7 @@ task :publish => "build:target:all" do
     "--builder=#{BUILDX_NAME}",
     "--file=Dockerfile",
     "--platform=#{platforms.join(",")}",
-    "--tag #{DOCKER_IMAGE_NAME}:latest",
+    # "--tag #{DOCKER_IMAGE_NAME}:latest",
     "--tag #{tag}"
   ]
   options << "--push" unless ENV["PUBLISH_DRY_RUN"]
