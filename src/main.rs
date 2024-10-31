@@ -124,9 +124,10 @@ async fn run() -> Result<(), Error> {
         let json = serde_json::to_string(&metrics).expect("Could not serialize JSON");
 
         let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+        let metrics_url = metrics_url_for_namespace(namespace.clone());
 
         let appsignal_response = reqwest_client
-            .post(metrics_url_for_namespace(namespace.clone()))
+            .post(metrics_url)
             .body(json.to_owned())
             .send()
             .await?;
@@ -200,6 +201,8 @@ fn extract_pod_metrics(
         return None;
     };
 
+    let pod_namespace = pod_results["podRef"]["namespace"].as_str().expect("Pod encountered without a namespace");
+
     for (metric_name, metric_value) in [
         (
             "pod_cpu_usage_nano_cores",
@@ -226,7 +229,7 @@ fn extract_pod_metrics(
         tags.insert("pod".to_owned(), pod_name.to_owned());
 
         if let Some(metric) = AppsignalMetric::new(metric_name, tags, metric_value) {
-            let metrics = out.entry("default".to_string()).or_insert(HashSet::new());
+            let metrics = out.entry(pod_namespace.to_string()).or_insert(HashSet::new());
             metrics.insert(metric.into_key());
         }
     }
