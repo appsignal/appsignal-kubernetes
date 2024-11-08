@@ -127,6 +127,12 @@ task :publish => "build:target:all" do
   puts "Published images '#{tag}' and 'latest'"
 end
 
+desc "Regenerate the protocol"
+task :protocol do
+  `mkdir -p protocol`
+  `protoc -I ../appsignal-protocol --rust_out=protocol ../appsignal-protocol/kubernetes.proto`
+end
+
 def current_version
   Command.run("script/read_version", :output => false).strip
 end
