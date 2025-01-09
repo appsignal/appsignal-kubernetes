@@ -18,7 +18,10 @@ type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 impl KubernetesMetrics {
     pub fn from_node_json(json: serde_json::Value) -> KubernetesMetrics {
         let mut metric = KubernetesMetrics::new();
-        metric.set_node_name(json["nodeName"].to_string());
+
+        if let Some(node_name) = json["nodeName"].as_str() {
+            metric.set_node_name(node_name.to_string());
+        }
 
         metric.set_timestamp(now_timestamp());
 
@@ -337,7 +340,7 @@ mod tests {
     fn extract_node_metrics_with_empty_results() {
         let metric = KubernetesMetrics::from_node_json(json!([]));
 
-        assert_eq!("null", metric.node_name);
+        assert_eq!("", metric.node_name);
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
     }
@@ -345,6 +348,7 @@ mod tests {
     #[test]
     fn extract_node_metrics_with_results() {
         let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
           "cpu": {
            "time": "2024-03-29T12:21:36Z",
            "usageNanoCores": 232839439,
@@ -352,6 +356,7 @@ mod tests {
           },
         }));
 
+        assert_eq!("node", metric.node_name);
         assert_eq!(232839439, metric.cpu_usage_nano_cores);
     }
 
