@@ -323,7 +323,8 @@ async fn run() -> Result<(), Error> {
 }
 
 fn now_timestamp() -> i64 {
-    time::now_utc().to_timespec().sec
+    let timestamp = time::now_utc().to_timespec().sec;
+    timestamp - timestamp % 60
 }
 
 #[cfg(test)]
@@ -338,6 +339,7 @@ mod tests {
 
         assert_eq!("null", metric.node_name);
         assert!(metric.timestamp > 1736429031);
+        assert!(metric.timestamp % 60 == 0);
     }
 
     #[test]
@@ -360,6 +362,7 @@ mod tests {
         assert_eq!("node", metric.node_name);
         assert_eq!("", metric.pod_name);
         assert!(metric.timestamp > 1736429031);
+        assert!(metric.timestamp % 60 == 0);
     }
 
     #[test]
@@ -395,6 +398,7 @@ mod tests {
         assert_eq!("node", metric.node_name);
         assert_eq!("", metric.volume_name);
         assert!(metric.timestamp > 1736429031);
+        assert!(metric.timestamp % 60 == 0);
     }
 
     #[test]
