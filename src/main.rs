@@ -335,6 +335,7 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!([]));
 
         assert_eq!("null", metric.node_name);
+        assert!(metric.timestamp > 1736429031);
     }
 
     #[test]
@@ -356,6 +357,7 @@ mod tests {
 
         assert_eq!("node", metric.node_name);
         assert_eq!("", metric.pod_name);
+        assert!(metric.timestamp > 1736429031);
     }
 
     #[test]
