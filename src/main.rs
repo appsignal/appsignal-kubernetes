@@ -112,10 +112,12 @@ impl KubernetesMetrics {
         metric
     }
 
-    pub fn from_pod_json(node_name: String, json: serde_json::Value) -> KubernetesMetrics {
+    pub fn from_pod_json(node_name: Option<&str>, json: serde_json::Value) -> KubernetesMetrics {
         let mut metric = KubernetesMetrics::new();
 
-        metric.set_node_name(node_name);
+        if let Some(name) = node_name {
+            metric.set_node_name(name.to_string());
+        }
 
         if let Some(name) = json["podRef"]["name"].as_str() {
             metric.set_pod_name(name.to_string());
@@ -202,10 +204,12 @@ impl KubernetesMetrics {
         metric
     }
 
-    pub fn from_volume_json(node_name: String, json: serde_json::Value) -> KubernetesMetrics {
+    pub fn from_volume_json(node_name: Option<&str>, json: serde_json::Value) -> KubernetesMetrics {
         let mut metric = KubernetesMetrics::new();
 
-        metric.set_node_name(node_name);
+        if let Some(name) = node_name {
+            metric.set_node_name(name.to_string());
+        }
 
         if let Some(name) = json["name"].as_str() {
             metric.set_volume_name(name.to_string());
@@ -278,7 +282,7 @@ async fn run() -> Result<(), Error> {
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
                 let pod_metric = KubernetesMetrics::from_pod_json(
-                    kube_response["node"]["nodeName"].to_string(),
+                    kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 );
 
@@ -289,7 +293,7 @@ async fn run() -> Result<(), Error> {
                 if let Some(volumes) = pod["volume"].as_array() {
                     for volume in volumes {
                         let volume_metric = KubernetesMetrics::from_volume_json(
-                            kube_response["node"]["nodeName"].to_string(),
+                            kube_response["node"]["nodeName"].as_str(),
                             volume.clone(),
                         );
 
@@ -362,9 +366,9 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_pod_json("node".to_string(), json!([]));
+        let metric = KubernetesMetrics::from_pod_json(None, json!([]));
 
-        assert_eq!("node", metric.node_name);
+        assert_eq!("", metric.node_name);
         assert_eq!("", metric.pod_name);
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
@@ -373,7 +377,7 @@ mod tests {
     #[test]
     fn extract_pod_metrics_with_results() {
         let metric = KubernetesMetrics::from_pod_json(
-            "node".to_string(),
+            Some("node"),
             json!({
               "podRef": {
                 "name": "kube-proxy-db7k4",
@@ -398,9 +402,9 @@ mod tests {
 
     #[test]
     fn extract_volume_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_volume_json("node".to_string(), json!([]));
+        let metric = KubernetesMetrics::from_volume_json(None, json!([]));
 
-        assert_eq!("node", metric.node_name);
+        assert_eq!("", metric.node_name);
         assert_eq!("", metric.volume_name);
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
@@ -409,7 +413,7 @@ mod tests {
     #[test]
     fn extract_volume_metrics_with_results() {
         let metric = KubernetesMetrics::from_volume_json(
-            "node".to_string(),
+            Some("node"),
             json!({
                 "time": "2024-10-08T13:42:48Z",
                 "availableBytes": 8318251008 as u64,
