@@ -208,6 +208,8 @@ impl KubernetesMetrics {
             metric.set_volume_name(name.to_string());
         }
 
+        metric.set_timestamp(now_timestamp());
+
         if let Some(fs_available_bytes) = json["availableBytes"].as_i64() {
             metric.set_fs_available_bytes(fs_available_bytes);
         }
@@ -392,6 +394,7 @@ mod tests {
 
         assert_eq!("node", metric.node_name);
         assert_eq!("", metric.volume_name);
+        assert!(metric.timestamp > 1736429031);
     }
 
     #[test]
