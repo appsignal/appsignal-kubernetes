@@ -109,6 +109,10 @@ impl KubernetesMetrics {
             metric.set_swap_usage_bytes(swap_usage_bytes);
         }
 
+        if let Some(swap_available_bytes) = json["swap"]["swapAvailableBytes"].as_i64() {
+            metric.set_swap_available_bytes(swap_available_bytes);
+        }
+
         metric
     }
 
@@ -365,6 +369,22 @@ mod tests {
     }
 
     #[test]
+    fn extract_node_metrics_with_swap_data() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "swap": {
+              "time": "2025-01-31T10:57:18Z",
+              "swapAvailableBytes": 10465738752 as u64,
+              "swapUsageBytes": 1024 as u64
+          }
+        }));
+
+        assert_eq!("node", metric.node_name);
+        assert_eq!(1024, metric.swap_usage_bytes);
+        assert_eq!(10465738752, metric.swap_available_bytes);
+    }
+
+    #[test]
     fn extract_pod_metrics_with_empty_results() {
         let metric = KubernetesMetrics::from_pod_json(None, json!([]));
 
@@ -398,6 +418,36 @@ mod tests {
         assert_eq!("3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8", metric.pod_uuid);
         assert_eq!(232839439, metric.cpu_usage_nano_cores);
         assert_eq!(1118592000000, metric.cpu_usage_core_nano_seconds);
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_swap_data() {
+        let metric = KubernetesMetrics::from_pod_json(
+            Some("node"),
+            json!({
+              "podRef": {
+                "name": "kube-proxy-db7k4",
+                "namespace": "kube-system",
+                "uid": "3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8"
+              },
+              "cpu": {
+                "time": "2024-03-29T12:21:36Z",
+                "usageNanoCores": 232839439,
+                "usageCoreNanoSeconds": 1118592000000 as u64
+              },
+            }),
+        );
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "swap": {
+            "time": "2025-01-31T11:01:29Z",
+            "swapUsageBytes": 512 as u64
+          }
+        }));
+
+        assert_eq!("node", metric.node_name);
+        assert_eq!(512, metric.swap_usage_bytes);
+        assert_eq!(0, metric.swap_available_bytes);
     }
 
     #[test]
