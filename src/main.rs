@@ -29,7 +29,7 @@ impl KubernetesMetrics {
             metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
         }
 
-        if let Some(cpu_usage_core_nano_seconds) = json["cpu"]["usageNanoSeconds"].as_i64() {
+        if let Some(cpu_usage_core_nano_seconds) = json["cpu"]["usageCoreNanoSeconds"].as_i64() {
             metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
         }
 
@@ -183,17 +183,17 @@ impl KubernetesMetrics {
         }
 
         if let Some(ephemeral_storage_inodes_free) =
-            json["ephemeral-storage"]["InodesFree"].as_i64()
+            json["ephemeral-storage"]["inodesFree"].as_i64()
         {
             metric.set_ephemeral_storage_inodes_free(ephemeral_storage_inodes_free);
         }
 
-        if let Some(ephemeral_storage_inodes) = json["ephemeral-storage"]["Inodes"].as_i64() {
+        if let Some(ephemeral_storage_inodes) = json["ephemeral-storage"]["inodes"].as_i64() {
             metric.set_ephemeral_storage_inodes(ephemeral_storage_inodes);
         }
 
         if let Some(ephemeral_storage_inodes_used) =
-            json["ephemeral-storage"]["InodesUsed"].as_i64()
+            json["ephemeral-storage"]["inodesUsed"].as_i64()
         {
             metric.set_ephemeral_storage_inodes_used(ephemeral_storage_inodes_used);
         }
