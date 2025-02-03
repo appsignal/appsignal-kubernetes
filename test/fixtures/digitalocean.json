@@ -65,9 +65,9 @@
       "time": "2025-02-03T13:53:28Z",
       "name": "eth0",
       "rxBytes": 6011987255,
-      "rxErrors": 0,
+      "rxErrors": 42,
       "txBytes": 5541026205,
-      "txErrors": 0,
+      "txErrors": 42,
       "interfaces": [
         {
           "name": "eth0",
@@ -198,8 +198,8 @@
     },
     "swap": {
       "time": "2025-02-03T13:53:28Z",
-      "swapAvailableBytes": 0,
-      "swapUsageBytes": 0
+      "swapAvailableBytes": 42,
+      "swapUsageBytes": 42
     }
   },
   "pods": [
@@ -318,7 +318,7 @@
       },
       "swap": {
         "time": "2025-02-03T13:53:28Z",
-        "swapUsageBytes": 0
+        "swapUsageBytes": 42
       }
     },
     {
