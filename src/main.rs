@@ -343,6 +343,7 @@ mod tests {
     use crate::KubernetesMetrics;
     use serde_json::json;
     use std::assert_eq;
+    use std::fs::File;
 
     #[test]
     fn extract_node_metrics_with_empty_results() {
@@ -355,17 +356,41 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let metric = KubernetesMetrics::from_node_json(json!({
-          "nodeName": "node",
-          "cpu": {
-           "time": "2024-03-29T12:21:36Z",
-           "usageNanoCores": 232839439,
-           "usageCoreNanoSeconds": 1118592000000 as u64
-          },
-        }));
+        let file = File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
+        let json: serde_json::Value =
+            serde_json::from_reader(file).expect("Could not parse example file");
 
-        assert_eq!("node", metric.node_name);
-        assert_eq!(232839439, metric.cpu_usage_nano_cores);
+        let metric = KubernetesMetrics::from_node_json(json["node"].clone());
+
+        assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
+
+        assert_eq!(44128133, metric.cpu_usage_nano_cores);
+        assert_eq!(83361299610000, metric.cpu_usage_core_nano_seconds);
+
+        assert_eq!(1039441920, metric.memory_available_bytes);
+        assert_eq!(1565478912, metric.memory_usage_bytes);
+        assert_eq!(1023315968, metric.memory_working_set_bytes);
+        assert_eq!(450433024, metric.memory_rss_bytes);
+        assert_eq!(97153339, metric.memory_page_faults);
+        assert_eq!(3780, metric.memory_major_page_faults);
+
+        assert_eq!(6011987255, metric.network_rx_bytes);
+        assert_eq!(42, metric.network_rx_errors);
+        assert_eq!(5541026205, metric.network_tx_bytes);
+        assert_eq!(42, metric.network_tx_errors);
+
+        assert_eq!(36804550656, metric.fs_available_bytes);
+        assert_eq!(52666433536, metric.fs_capacity_bytes);
+        assert_eq!(13682970624, metric.fs_used_bytes);
+        assert_eq!(3148894, metric.fs_inodes_free);
+        assert_eq!(3268608, metric.fs_inodes);
+        assert_eq!(119714, metric.fs_inodes_used);
+
+        assert_eq!(15432, metric.rlimit_maxpid);
+        assert_eq!(363, metric.rlimit_curproc);
+
+        assert_eq!(42, metric.swap_usage_bytes);
+        assert_eq!(42, metric.swap_available_bytes);
     }
 
     #[test]
@@ -396,58 +421,36 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let metric = KubernetesMetrics::from_pod_json(
-            Some("node"),
-            json!({
-              "podRef": {
-                "name": "kube-proxy-db7k4",
-                "namespace": "kube-system",
-                "uid": "3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8"
-              },
-              "cpu": {
-                "time": "2024-03-29T12:21:36Z",
-                "usageNanoCores": 232839439,
-                "usageCoreNanoSeconds": 1118592000000 as u64
-              },
-            }),
-        );
+        let file = File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
+        let json: serde_json::Value =
+            serde_json::from_reader(file).expect("Could not parse example file");
+
+        let metric = KubernetesMetrics::from_pod_json(Some("node"), json["pods"][0].clone());
 
         assert_eq!("node", metric.node_name);
-        assert_eq!("kube-proxy-db7k4", metric.pod_name);
+        assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
         assert_eq!("kube-system", metric.pod_namespace);
-        assert_eq!("3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8", metric.pod_uuid);
-        assert_eq!(232839439, metric.cpu_usage_nano_cores);
-        assert_eq!(1118592000000, metric.cpu_usage_core_nano_seconds);
-    }
+        assert_eq!("eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4", metric.pod_uuid);
 
-    #[test]
-    fn extract_pod_metrics_with_swap_data() {
-        let metric = KubernetesMetrics::from_pod_json(
-            Some("node"),
-            json!({
-              "podRef": {
-                "name": "kube-proxy-db7k4",
-                "namespace": "kube-system",
-                "uid": "3f3c1bf6-0fe9-4bc9-8cfb-965f36c485d8"
-              },
-              "cpu": {
-                "time": "2024-03-29T12:21:36Z",
-                "usageNanoCores": 232839439,
-                "usageCoreNanoSeconds": 1118592000000 as u64
-              },
-            }),
-        );
-        let metric = KubernetesMetrics::from_node_json(json!({
-          "nodeName": "node",
-          "swap": {
-            "time": "2025-01-31T11:01:29Z",
-            "swapUsageBytes": 512 as u64
-          }
-        }));
+        assert_eq!(409594, metric.cpu_usage_nano_cores);
+        assert_eq!(631022780000, metric.cpu_usage_core_nano_seconds);
 
-        assert_eq!("node", metric.node_name);
-        assert_eq!(512, metric.swap_usage_bytes);
-        assert_eq!(0, metric.swap_available_bytes);
+        assert_eq!(10760192, metric.memory_usage_bytes);
+        assert_eq!(10702848, metric.memory_working_set_bytes);
+        assert_eq!(9584640, metric.memory_rss_bytes);
+        assert_eq!(2832, metric.memory_page_faults);
+        assert_eq!(7, metric.memory_major_page_faults);
+
+        assert_eq!(36804550656, metric.ephemeral_storage_available_bytes);
+        assert_eq!(52666433536, metric.ephemeral_storage_capacity_bytes);
+        assert_eq!(15360000, metric.ephemeral_storage_used_bytes);
+        assert_eq!(3148894, metric.ephemeral_storage_inodes_free);
+        assert_eq!(3268608, metric.ephemeral_storage_inodes);
+        assert_eq!(17, metric.ephemeral_storage_inodes_used);
+
+        assert_eq!(1, metric.process_count);
+
+        assert_eq!(42, metric.swap_usage_bytes);
     }
 
     #[test]
