@@ -165,6 +165,22 @@ impl KubernetesMetrics {
             metric.set_memory_major_page_faults(memory_major_page_faults as i32);
         }
 
+        if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
+            metric.set_network_rx_bytes(network_rx_bytes);
+        }
+
+        if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
+            metric.set_network_rx_errors(network_rx_errors as i32);
+        }
+
+        if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
+            metric.set_network_tx_bytes(network_tx_bytes);
+        }
+
+        if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
+            metric.set_network_tx_errors(network_tx_errors as i32);
+        }
+
         if let Some(ephemeral_storage_available_bytes) =
             json["ephemeral-storage"]["availableBytes"].as_i64()
         {
@@ -440,6 +456,11 @@ mod tests {
         assert_eq!(9584640, metric.memory_rss_bytes);
         assert_eq!(2832, metric.memory_page_faults);
         assert_eq!(7, metric.memory_major_page_faults);
+
+        assert_eq!(2732202444, metric.network_rx_bytes);
+        assert_eq!(42, metric.network_rx_errors);
+        assert_eq!(2814051624, metric.network_tx_bytes);
+        assert_eq!(42, metric.network_tx_errors);
 
         assert_eq!(36804550656, metric.ephemeral_storage_available_bytes);
         assert_eq!(52666433536, metric.ephemeral_storage_capacity_bytes);

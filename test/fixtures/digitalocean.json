@@ -269,9 +269,9 @@
         "time": "2025-02-03T13:53:24Z",
         "name": "eth0",
         "rxBytes": 2732202444,
-        "rxErrors": 0,
+        "rxErrors": 42,
         "txBytes": 2814051624,
-        "txErrors": 0,
+        "txErrors": 42,
         "interfaces": [
           {
             "name": "eth0",
