@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "appsignal-kubernetes"
-version = "1.0.0-alpha.3"
+version = "1.0.0-alpha.4"
 dependencies = [
  "env_logger",
  "http",
