@@ -361,6 +361,12 @@ mod tests {
     use std::assert_eq;
     use std::fs::File;
 
+    fn json() -> serde_json::Value {
+        let file =
+            File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
+        serde_json::from_reader(file).expect("Could not parse example file")
+    }
+
     #[test]
     fn extract_node_metrics_with_empty_results() {
         let metric = KubernetesMetrics::from_node_json(json!([]));
@@ -372,11 +378,7 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let file = File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
-        let json: serde_json::Value =
-            serde_json::from_reader(file).expect("Could not parse example file");
-
-        let metric = KubernetesMetrics::from_node_json(json["node"].clone());
+        let metric = KubernetesMetrics::from_node_json(json()["node"].clone());
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
 
@@ -437,11 +439,7 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let file = File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
-        let json: serde_json::Value =
-            serde_json::from_reader(file).expect("Could not parse example file");
-
-        let metric = KubernetesMetrics::from_pod_json(Some("node"), json["pods"][0].clone());
+        let metric = KubernetesMetrics::from_pod_json(Some("node"), json()["pods"][0].clone());
 
         assert_eq!("node", metric.node_name);
         assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
