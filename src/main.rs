@@ -16,7 +16,7 @@ use kubernetes::KubernetesMetrics;
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 impl KubernetesMetrics {
-    pub fn from_node_json(json: serde_json::Value) -> KubernetesMetrics {
+    pub fn from_node_json(json: serde_json::Value) -> Option<KubernetesMetrics> {
         let mut metric = KubernetesMetrics::new();
 
         if let Some(node_name) = json["nodeName"].as_str() {
@@ -113,10 +113,13 @@ impl KubernetesMetrics {
             metric.set_swap_available_bytes(swap_available_bytes);
         }
 
-        metric
+        Some(metric)
     }
 
-    pub fn from_pod_json(node_name: Option<&str>, json: serde_json::Value) -> KubernetesMetrics {
+    pub fn from_pod_json(
+        node_name: Option<&str>,
+        json: serde_json::Value,
+    ) -> Option<KubernetesMetrics> {
         let mut metric = KubernetesMetrics::new();
 
         if let Some(name) = node_name {
@@ -221,10 +224,14 @@ impl KubernetesMetrics {
         if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
             metric.set_swap_usage_bytes(swap_usage_bytes);
         }
-        metric
+
+        Some(metric)
     }
 
-    pub fn from_volume_json(node_name: Option<&str>, json: serde_json::Value) -> KubernetesMetrics {
+    pub fn from_volume_json(
+        node_name: Option<&str>,
+        json: serde_json::Value,
+    ) -> Option<KubernetesMetrics> {
         let mut metric = KubernetesMetrics::new();
 
         if let Some(name) = node_name {
@@ -261,7 +268,7 @@ impl KubernetesMetrics {
             metric.set_fs_inodes_used(fs_inodes_used);
         }
 
-        metric
+        Some(metric)
     }
 }
 
@@ -336,14 +343,19 @@ async fn run() -> Result<(), Error> {
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
     for metric in metrics {
-        let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
-        let appsignal_response = reqwest_client
-            .post(url.clone())
-            .body(metric_bytes)
-            .send()
-            .await?;
+        match metric {
+            Some(metric) => {
+                let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
+                let appsignal_response = reqwest_client
+                    .post(url.clone())
+                    .body(metric_bytes)
+                    .send()
+                    .await?;
 
-        debug!("Metric sent: {:?}", appsignal_response);
+                debug!("Metric sent: {:?}", appsignal_response);
+            }
+            None => (),
+        }
     }
 
     Ok(())
@@ -369,7 +381,7 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_node_json(json!([]));
+        let metric = KubernetesMetrics::from_node_json(json!([])).unwrap();
 
         assert_eq!("", metric.node_name);
         assert!(metric.timestamp > 1736429031);
@@ -378,7 +390,7 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let metric = KubernetesMetrics::from_node_json(json()["node"].clone());
+        let metric = KubernetesMetrics::from_node_json(json()["node"].clone()).unwrap();
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
 
@@ -420,7 +432,8 @@ mod tests {
               "swapAvailableBytes": 10465738752 as u64,
               "swapUsageBytes": 1024 as u64
           }
-        }));
+        }))
+        .unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!(1024, metric.swap_usage_bytes);
@@ -429,7 +442,7 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_pod_json(None, json!([]));
+        let metric = KubernetesMetrics::from_pod_json(None, json!([])).unwrap();
 
         assert_eq!("", metric.node_name);
         assert_eq!("", metric.pod_name);
@@ -439,7 +452,8 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let metric = KubernetesMetrics::from_pod_json(Some("node"), json()["pods"][0].clone());
+        let metric =
+            KubernetesMetrics::from_pod_json(Some("node"), json()["pods"][0].clone()).unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
@@ -474,7 +488,7 @@ mod tests {
 
     #[test]
     fn extract_volume_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_volume_json(None, json!([]));
+        let metric = KubernetesMetrics::from_volume_json(None, json!([])).unwrap();
 
         assert_eq!("", metric.node_name);
         assert_eq!("", metric.volume_name);
@@ -496,7 +510,8 @@ mod tests {
                 "inodesUsed": 9,
                 "name": "kube-api-access-qz4b4"
             }),
-        );
+        )
+        .unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!("kube-api-access-qz4b4", metric.volume_name);
