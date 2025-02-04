@@ -279,6 +279,20 @@ impl KubernetesMetrics {
             _ => None,
         }
     }
+
+    pub fn delta(&self, previous: KubernetesMetrics) -> KubernetesMetrics {
+        let mut new = self.clone();
+
+        new.set_network_rx_bytes(new.get_network_rx_bytes() - previous.get_network_rx_bytes());
+
+        new.set_network_rx_errors(new.get_network_rx_errors() - previous.get_network_rx_errors());
+
+        new.set_network_tx_bytes(new.get_network_tx_bytes() - previous.get_network_tx_bytes());
+
+        new.set_network_tx_errors(new.get_network_tx_errors() - previous.get_network_tx_errors());
+
+        new
+    }
 }
 
 #[tokio::main]
@@ -521,5 +535,19 @@ mod tests {
         assert!(metric.timestamp % 60 == 0);
 
         assert_eq!(8318251008, metric.fs_available_bytes);
+    }
+
+    #[test]
+    fn delta_subtracts_network_data() {
+        let metric = KubernetesMetrics::from_node_json(json()["node"].clone())
+            .clone()
+            .unwrap();
+
+        let new = metric.delta(metric.clone());
+
+        assert_eq!(0, new.network_rx_bytes);
+        assert_eq!(0, new.network_rx_errors);
+        assert_eq!(0, new.network_tx_bytes);
+        assert_eq!(0, new.network_tx_errors);
     }
 }
