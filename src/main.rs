@@ -303,11 +303,11 @@ async fn main() -> Result<(), Error> {
 
     loop {
         interval.tick().await;
-        run().await.expect("Failed to extract metrics.")
+        run().await.expect("Failed to extract metrics.");
     }
 }
 
-async fn run() -> Result<(), Error> {
+async fn run() -> Result<Vec<KubernetesMetrics>, Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
@@ -367,7 +367,7 @@ async fn run() -> Result<(), Error> {
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
-    for metric in metrics {
+    for metric in &metrics {
         let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
         let appsignal_response = reqwest_client
             .post(url.clone())
@@ -376,9 +376,9 @@ async fn run() -> Result<(), Error> {
             .await?;
 
         debug!("Metric sent: {:?}", appsignal_response);
-    }
+    };
 
-    Ok(())
+    Ok(metrics)
 }
 
 fn now_timestamp() -> i64 {
