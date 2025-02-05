@@ -324,32 +324,34 @@ async fn run() -> Result<(), Error> {
 
         trace!("JSON: {:?}", kube_response);
 
-        let node_metric = KubernetesMetrics::from_node_json(kube_response["node"].clone());
-        metrics.push(node_metric.clone());
+        if let Some(node_metric) = KubernetesMetrics::from_node_json(kube_response["node"].clone())
+        {
+            metrics.push(node_metric.clone());
 
-        trace!("Node: {:?}", node_metric);
+            trace!("Node: {:?}", node_metric);
+        };
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                let pod_metric = KubernetesMetrics::from_pod_json(
+                if let Some(pod_metric) = KubernetesMetrics::from_pod_json(
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
-                );
+                ) {
+                    metrics.push(pod_metric.clone());
 
-                metrics.push(pod_metric.clone());
-
-                trace!("Pod: {:?}", pod_metric);
+                    trace!("Pod: {:?}", pod_metric);
+                };
 
                 if let Some(volumes) = pod["volume"].as_array() {
                     for volume in volumes {
-                        let volume_metric = KubernetesMetrics::from_volume_json(
+                        if let Some(volume_metric) = KubernetesMetrics::from_volume_json(
                             kube_response["node"]["nodeName"].as_str(),
                             volume.clone(),
-                        );
+                        ) {
+                            metrics.push(volume_metric.clone());
 
-                        metrics.push(volume_metric.clone());
-
-                        trace!("Volume: {:?}", volume_metric);
+                            trace!("Volume: {:?}", volume_metric);
+                        };
                     }
                 }
             }
@@ -366,19 +368,14 @@ async fn run() -> Result<(), Error> {
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
     for metric in metrics {
-        match metric {
-            Some(metric) => {
-                let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
-                let appsignal_response = reqwest_client
-                    .post(url.clone())
-                    .body(metric_bytes)
-                    .send()
-                    .await?;
+        let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
+        let appsignal_response = reqwest_client
+            .post(url.clone())
+            .body(metric_bytes)
+            .send()
+            .await?;
 
-                debug!("Metric sent: {:?}", appsignal_response);
-            }
-            None => (),
-        }
+        debug!("Metric sent: {:?}", appsignal_response);
     }
 
     Ok(())
