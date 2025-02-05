@@ -312,11 +312,12 @@ async fn main() -> Result<(), Error> {
     }
 }
 
-async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
+async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
     let mut metrics = Vec::new();
+    let mut payload = Vec::new();
 
     for node in nodes {
         let name = node.name_any();
@@ -331,6 +332,12 @@ async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>
 
         if let Some(node_metric) = KubernetesMetrics::from_node_json(kube_response["node"].clone())
         {
+            if let Some(result) = previous.iter().find(|&p| {
+                p.node_name == node_metric.node_name && p.volume_name == "" && p.pod_uuid == ""
+            }) {
+                payload.push(node_metric.delta(result.clone()));
+            }
+
             metrics.push(node_metric.clone());
 
             trace!("Node: {:?}", node_metric);
@@ -342,6 +349,13 @@ async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 ) {
+
+                    if let Some(result) = previous.iter().find(|&p| {
+                        p.pod_uuid == pod_metric.pod_uuid
+                    }) {
+                        payload.push(pod_metric.delta(result.clone()));
+                    }
+
                     metrics.push(pod_metric.clone());
 
                     trace!("Pod: {:?}", pod_metric);
@@ -353,6 +367,14 @@ async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>
                             kube_response["node"]["nodeName"].as_str(),
                             volume.clone(),
                         ) {
+
+                            if let Some(result) = previous.iter().find(|&p| {
+                                p.volume_name == volume_metric.volume_name &&
+                                p.node_name == volume_metric.node_name
+                            }) {
+                                payload.push(volume_metric.delta(result.clone()));
+                            }
+
                             metrics.push(volume_metric.clone());
 
                             trace!("Volume: {:?}", volume_metric);
@@ -372,7 +394,7 @@ async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
-    for metric in &metrics {
+    for metric in &payload {
         let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
         let appsignal_response = reqwest_client
             .post(url.clone())
@@ -381,7 +403,7 @@ async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>
             .await?;
 
         debug!("Metric sent: {:?}", appsignal_response);
-    };
+    }
 
     Ok(metrics)
 }
