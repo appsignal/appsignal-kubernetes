@@ -280,6 +280,18 @@ impl KubernetesMetrics {
         }
     }
 
+    pub fn is_node(&self) -> bool {
+        !self.is_pod() && !self.is_volume()
+    }
+
+    pub fn is_pod(&self) -> bool {
+        self.pod_uuid != ""
+    }
+
+    pub fn is_volume(&self) -> bool {
+        self.volume_name != ""
+    }
+
     pub fn delta(&self, previous: KubernetesMetrics) -> KubernetesMetrics {
         let mut new = self.clone();
 
@@ -292,6 +304,17 @@ impl KubernetesMetrics {
         new.set_network_tx_errors(new.get_network_tx_errors() - previous.get_network_tx_errors());
 
         new
+    }
+
+    pub fn delta_from(&self, previous: Vec<KubernetesMetrics>) -> Option<KubernetesMetrics> {
+        match previous.iter().find(|&p| {
+            (self.is_pod() && p.pod_uuid == self.pod_uuid)
+                || (self.is_node() && p.node_name == self.node_name)
+                || (self.is_volume() && p.volume_name == self.volume_name)
+        }) {
+            Some(previous) => Some(self.delta(previous.clone())),
+            _ => None,
+        }
     }
 }
 
@@ -332,10 +355,8 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
 
         if let Some(node_metric) = KubernetesMetrics::from_node_json(kube_response["node"].clone())
         {
-            if let Some(result) = previous.iter().find(|&p| {
-                p.node_name == node_metric.node_name && p.volume_name == "" && p.pod_uuid == ""
-            }) {
-                payload.push(node_metric.delta(result.clone()));
+            if let Some(metric) = node_metric.delta_from(previous.clone()) {
+                payload.push(metric);
             }
 
             metrics.push(node_metric.clone());
@@ -349,11 +370,8 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 ) {
-
-                    if let Some(result) = previous.iter().find(|&p| {
-                        p.pod_uuid == pod_metric.pod_uuid
-                    }) {
-                        payload.push(pod_metric.delta(result.clone()));
+                    if let Some(metric) = pod_metric.delta_from(previous.clone()) {
+                        payload.push(metric);
                     }
 
                     metrics.push(pod_metric.clone());
@@ -367,12 +385,8 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                             kube_response["node"]["nodeName"].as_str(),
                             volume.clone(),
                         ) {
-
-                            if let Some(result) = previous.iter().find(|&p| {
-                                p.volume_name == volume_metric.volume_name &&
-                                p.node_name == volume_metric.node_name
-                            }) {
-                                payload.push(volume_metric.delta(result.clone()));
+                            if let Some(metric) = volume_metric.delta_from(previous.clone()) {
+                                payload.push(metric);
                             }
 
                             metrics.push(volume_metric.clone());
@@ -436,6 +450,10 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json()["node"].clone()).unwrap();
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
+
+        assert_eq!(metric.is_node(), true);
+        assert_eq!(metric.is_pod(), false);
+        assert_eq!(metric.is_volume(), false);
 
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
@@ -501,6 +519,10 @@ mod tests {
         assert_eq!("kube-system", metric.pod_namespace);
         assert_eq!("eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4", metric.pod_uuid);
 
+        assert_eq!(metric.is_node(), false);
+        assert_eq!(metric.is_pod(), true);
+        assert_eq!(metric.is_volume(), false);
+
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
 
@@ -555,6 +577,10 @@ mod tests {
         assert_eq!("node", metric.node_name);
         assert_eq!("kube-api-access-qz4b4", metric.volume_name);
 
+        assert_eq!(metric.is_node(), false);
+        assert_eq!(metric.is_pod(), false);
+        assert_eq!(metric.is_volume(), true);
+
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
 
@@ -573,5 +599,87 @@ mod tests {
         assert_eq!(0, new.network_rx_errors);
         assert_eq!(0, new.network_tx_bytes);
         assert_eq!(0, new.network_tx_errors);
+    }
+
+    #[test]
+    fn delta_from_node() {
+        let node = KubernetesMetrics::from_node_json(json!({
+            "nodeName": "node",
+            "network": {
+                "rxBytes": 6011987255 as u64,
+            }
+        }))
+        .unwrap();
+
+        let previous = vec![
+            KubernetesMetrics::from_node_json(json!({
+                "nodeName": "other_node",
+                "network": {
+                    "rxBytes": 6011987255 as u64,
+                }
+            }))
+            .unwrap(),
+            KubernetesMetrics::from_node_json(json!({
+                "nodeName": "node",
+                "network": {
+                    "rxBytes": 6011987250 as u64,
+                }
+            }))
+            .unwrap(),
+        ];
+
+        let new = node.delta_from(previous).unwrap();
+
+        assert_eq!(5, new.network_rx_bytes);
+    }
+
+    #[test]
+    fn delta_from_pod() {
+        let node = KubernetesMetrics::from_pod_json(
+            Some("node"),
+            json!({
+                "podRef": {
+                    "name": "pod",
+                    "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
+                },
+                "network": {
+                    "rxBytes": 2732202444 as u64,
+                }
+            }),
+        )
+        .unwrap();
+
+        let previous = vec![
+            KubernetesMetrics::from_pod_json(
+                Some("node"),
+                json!({
+                    "podRef": {
+                        "name": "pod",
+                        "uid": "differen-tuid-4cbf-9f2d-1ca9e926c7e4",
+                    },
+                    "network": {
+                        "rxBytes": 2732202444 as u64,
+                    }
+                }),
+            )
+            .unwrap(),
+            KubernetesMetrics::from_pod_json(
+                Some("node"),
+                json!({
+                    "podRef": {
+                        "name": "pod",
+                        "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
+                    },
+                    "network": {
+                        "rxBytes": 2732202440 as u64,
+                    }
+                }),
+            )
+            .unwrap(),
+        ];
+
+        let new = node.delta_from(previous).unwrap();
+
+        assert_eq!(4, new.network_rx_bytes);
     }
 }
