@@ -300,14 +300,19 @@ async fn main() -> Result<(), Error> {
     env_logger::init();
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
+    let mut previous = Vec::new();
 
     loop {
         interval.tick().await;
-        run().await.expect("Failed to extract metrics.");
+
+        match run(previous).await {
+            Ok(results) => previous = results,
+            Err(err) => panic!("Failed to extract metrics: {}", err),
+        }
     }
 }
 
-async fn run() -> Result<Vec<KubernetesMetrics>, Error> {
+async fn run(_previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
