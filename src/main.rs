@@ -16,252 +16,305 @@ use kubernetes::KubernetesMetrics;
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 impl KubernetesMetrics {
-    pub fn from_node_json(json: serde_json::Value) -> KubernetesMetrics {
-        let mut metric = KubernetesMetrics::new();
+    pub fn from_node_json(json: serde_json::Value) -> Option<KubernetesMetrics> {
+        match json["nodeName"].as_str() {
+            Some(node_name) => {
+                let mut metric = KubernetesMetrics::new();
 
-        if let Some(node_name) = json["nodeName"].as_str() {
-            metric.set_node_name(node_name.to_string());
+                metric.set_node_name(node_name.to_string());
+
+                metric.set_timestamp(now_timestamp());
+
+                if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
+                    metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
+                }
+
+                if let Some(cpu_usage_core_nano_seconds) =
+                    json["cpu"]["usageCoreNanoSeconds"].as_i64()
+                {
+                    metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
+                }
+
+                if let Some(memory_available_bytes) = json["memory"]["availableBytes"].as_i64() {
+                    metric.set_memory_available_bytes(memory_available_bytes);
+                }
+
+                if let Some(memory_usage_bytes) = json["memory"]["usageBytes"].as_i64() {
+                    metric.set_memory_usage_bytes(memory_usage_bytes);
+                }
+
+                if let Some(memory_working_set_bytes) = json["memory"]["workingSetBytes"].as_i64() {
+                    metric.set_memory_working_set_bytes(memory_working_set_bytes);
+                }
+
+                if let Some(memory_rss_bytes) = json["memory"]["rssBytes"].as_i64() {
+                    metric.set_memory_rss_bytes(memory_rss_bytes);
+                }
+
+                if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
+                    metric.set_memory_page_faults(memory_page_faults as i32);
+                }
+
+                if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
+                    metric.set_memory_major_page_faults(memory_major_page_faults as i32);
+                }
+
+                if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
+                    metric.set_network_rx_bytes(network_rx_bytes);
+                }
+
+                if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
+                    metric.set_network_rx_errors(network_rx_errors as i32);
+                }
+
+                if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
+                    metric.set_network_tx_bytes(network_tx_bytes);
+                }
+
+                if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
+                    metric.set_network_tx_errors(network_tx_errors as i32);
+                }
+
+                if let Some(fs_available_bytes) = json["fs"]["availableBytes"].as_i64() {
+                    metric.set_fs_available_bytes(fs_available_bytes);
+                }
+
+                if let Some(fs_capacity_bytes) = json["fs"]["capacityBytes"].as_i64() {
+                    metric.set_fs_capacity_bytes(fs_capacity_bytes);
+                }
+
+                if let Some(fs_used_bytes) = json["fs"]["usedBytes"].as_i64() {
+                    metric.set_fs_used_bytes(fs_used_bytes);
+                }
+
+                if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
+                    metric.set_fs_inodes_free(fs_inodes_free);
+                }
+
+                if let Some(fs_inodes) = json["fs"]["inodes"].as_i64() {
+                    metric.set_fs_inodes(fs_inodes);
+                }
+
+                if let Some(fs_inodes_used) = json["fs"]["inodesUsed"].as_i64() {
+                    metric.set_fs_inodes_used(fs_inodes_used);
+                }
+
+                if let Some(rlimit_maxpid) = json["rlimit"]["maxpid"].as_i64() {
+                    metric.set_rlimit_maxpid(rlimit_maxpid as i32);
+                }
+
+                if let Some(rlimit_curproc) = json["rlimit"]["curproc"].as_i64() {
+                    metric.set_rlimit_curproc(rlimit_curproc as i32);
+                }
+
+                if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
+                    metric.set_swap_usage_bytes(swap_usage_bytes);
+                }
+
+                if let Some(swap_available_bytes) = json["swap"]["swapAvailableBytes"].as_i64() {
+                    metric.set_swap_available_bytes(swap_available_bytes);
+                }
+
+                Some(metric)
+            }
+            _ => None,
         }
-
-        metric.set_timestamp(now_timestamp());
-
-        if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
-            metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
-        }
-
-        if let Some(cpu_usage_core_nano_seconds) = json["cpu"]["usageCoreNanoSeconds"].as_i64() {
-            metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
-        }
-
-        if let Some(memory_available_bytes) = json["memory"]["availableBytes"].as_i64() {
-            metric.set_memory_available_bytes(memory_available_bytes);
-        }
-
-        if let Some(memory_usage_bytes) = json["memory"]["usageBytes"].as_i64() {
-            metric.set_memory_usage_bytes(memory_usage_bytes);
-        }
-
-        if let Some(memory_working_set_bytes) = json["memory"]["workingSetBytes"].as_i64() {
-            metric.set_memory_working_set_bytes(memory_working_set_bytes);
-        }
-
-        if let Some(memory_rss_bytes) = json["memory"]["rssBytes"].as_i64() {
-            metric.set_memory_rss_bytes(memory_rss_bytes);
-        }
-
-        if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
-            metric.set_memory_page_faults(memory_page_faults as i32);
-        }
-
-        if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
-            metric.set_memory_major_page_faults(memory_major_page_faults as i32);
-        }
-
-        if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
-            metric.set_network_rx_bytes(network_rx_bytes);
-        }
-
-        if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
-            metric.set_network_rx_errors(network_rx_errors as i32);
-        }
-
-        if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
-            metric.set_network_tx_bytes(network_tx_bytes);
-        }
-
-        if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
-            metric.set_network_tx_errors(network_tx_errors as i32);
-        }
-
-        if let Some(fs_available_bytes) = json["fs"]["availableBytes"].as_i64() {
-            metric.set_fs_available_bytes(fs_available_bytes);
-        }
-
-        if let Some(fs_capacity_bytes) = json["fs"]["capacityBytes"].as_i64() {
-            metric.set_fs_capacity_bytes(fs_capacity_bytes);
-        }
-
-        if let Some(fs_used_bytes) = json["fs"]["usedBytes"].as_i64() {
-            metric.set_fs_used_bytes(fs_used_bytes);
-        }
-
-        if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
-            metric.set_fs_inodes_free(fs_inodes_free);
-        }
-
-        if let Some(fs_inodes) = json["fs"]["inodes"].as_i64() {
-            metric.set_fs_inodes(fs_inodes);
-        }
-
-        if let Some(fs_inodes_used) = json["fs"]["inodesUsed"].as_i64() {
-            metric.set_fs_inodes_used(fs_inodes_used);
-        }
-
-        if let Some(rlimit_maxpid) = json["rlimit"]["maxpid"].as_i64() {
-            metric.set_rlimit_maxpid(rlimit_maxpid as i32);
-        }
-
-        if let Some(rlimit_curproc) = json["rlimit"]["curproc"].as_i64() {
-            metric.set_rlimit_curproc(rlimit_curproc as i32);
-        }
-
-        if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
-            metric.set_swap_usage_bytes(swap_usage_bytes);
-        }
-
-        if let Some(swap_available_bytes) = json["swap"]["swapAvailableBytes"].as_i64() {
-            metric.set_swap_available_bytes(swap_available_bytes);
-        }
-
-        metric
     }
 
-    pub fn from_pod_json(node_name: Option<&str>, json: serde_json::Value) -> KubernetesMetrics {
-        let mut metric = KubernetesMetrics::new();
+    pub fn from_pod_json(
+        node_name: Option<&str>,
+        json: serde_json::Value,
+    ) -> Option<KubernetesMetrics> {
+        match (node_name, json["podRef"]["name"].as_str()) {
+            (Some(node_name), Some(pod_name)) => {
+                let mut metric = KubernetesMetrics::new();
 
-        if let Some(name) = node_name {
-            metric.set_node_name(name.to_string());
+                metric.set_node_name(node_name.to_string());
+                metric.set_pod_name(pod_name.to_string());
+
+                if let Some(namespace) = json["podRef"]["namespace"].as_str() {
+                    metric.set_pod_namespace(namespace.to_string());
+                }
+
+                if let Some(uid) = json["podRef"]["uid"].as_str() {
+                    metric.set_pod_uuid(uid.to_string());
+                }
+
+                metric.set_timestamp(now_timestamp());
+
+                if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
+                    metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
+                }
+
+                if let Some(cpu_usage_core_nano_seconds) =
+                    json["cpu"]["usageCoreNanoSeconds"].as_i64()
+                {
+                    metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
+                }
+
+                if let Some(memory_usage_bytes) = json["memory"]["usageBytes"].as_i64() {
+                    metric.set_memory_usage_bytes(memory_usage_bytes);
+                }
+
+                if let Some(memory_working_set_bytes) = json["memory"]["workingSetBytes"].as_i64() {
+                    metric.set_memory_working_set_bytes(memory_working_set_bytes);
+                }
+
+                if let Some(memory_rss_bytes) = json["memory"]["rssBytes"].as_i64() {
+                    metric.set_memory_rss_bytes(memory_rss_bytes);
+                }
+
+                if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
+                    metric.set_memory_page_faults(memory_page_faults as i32);
+                }
+
+                if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
+                    metric.set_memory_major_page_faults(memory_major_page_faults as i32);
+                }
+
+                if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
+                    metric.set_network_rx_bytes(network_rx_bytes);
+                }
+
+                if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
+                    metric.set_network_rx_errors(network_rx_errors as i32);
+                }
+
+                if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
+                    metric.set_network_tx_bytes(network_tx_bytes);
+                }
+
+                if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
+                    metric.set_network_tx_errors(network_tx_errors as i32);
+                }
+
+                if let Some(ephemeral_storage_available_bytes) =
+                    json["ephemeral-storage"]["availableBytes"].as_i64()
+                {
+                    metric.set_ephemeral_storage_available_bytes(ephemeral_storage_available_bytes);
+                }
+
+                if let Some(ephemeral_storage_capacity_bytes) =
+                    json["ephemeral-storage"]["capacityBytes"].as_i64()
+                {
+                    metric.set_ephemeral_storage_capacity_bytes(ephemeral_storage_capacity_bytes);
+                }
+
+                if let Some(ephemeral_storage_used_bytes) =
+                    json["ephemeral-storage"]["usedBytes"].as_i64()
+                {
+                    metric.set_ephemeral_storage_used_bytes(ephemeral_storage_used_bytes);
+                }
+
+                if let Some(ephemeral_storage_inodes_free) =
+                    json["ephemeral-storage"]["inodesFree"].as_i64()
+                {
+                    metric.set_ephemeral_storage_inodes_free(ephemeral_storage_inodes_free);
+                }
+
+                if let Some(ephemeral_storage_inodes) = json["ephemeral-storage"]["inodes"].as_i64()
+                {
+                    metric.set_ephemeral_storage_inodes(ephemeral_storage_inodes);
+                }
+
+                if let Some(ephemeral_storage_inodes_used) =
+                    json["ephemeral-storage"]["inodesUsed"].as_i64()
+                {
+                    metric.set_ephemeral_storage_inodes_used(ephemeral_storage_inodes_used);
+                }
+
+                if let Some(process_count) = json["process_stats"]["process_count"].as_i64() {
+                    metric.set_process_count(process_count as i32);
+                }
+
+                if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
+                    metric.set_swap_usage_bytes(swap_usage_bytes);
+                }
+
+                Some(metric)
+            }
+            _ => None,
         }
-
-        if let Some(name) = json["podRef"]["name"].as_str() {
-            metric.set_pod_name(name.to_string());
-        }
-
-        if let Some(namespace) = json["podRef"]["namespace"].as_str() {
-            metric.set_pod_namespace(namespace.to_string());
-        }
-
-        if let Some(uid) = json["podRef"]["uid"].as_str() {
-            metric.set_pod_uuid(uid.to_string());
-        }
-
-        metric.set_timestamp(now_timestamp());
-
-        if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
-            metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
-        }
-
-        if let Some(cpu_usage_core_nano_seconds) = json["cpu"]["usageCoreNanoSeconds"].as_i64() {
-            metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
-        }
-
-        if let Some(memory_usage_bytes) = json["memory"]["usageBytes"].as_i64() {
-            metric.set_memory_usage_bytes(memory_usage_bytes);
-        }
-
-        if let Some(memory_working_set_bytes) = json["memory"]["workingSetBytes"].as_i64() {
-            metric.set_memory_working_set_bytes(memory_working_set_bytes);
-        }
-
-        if let Some(memory_rss_bytes) = json["memory"]["rssBytes"].as_i64() {
-            metric.set_memory_rss_bytes(memory_rss_bytes);
-        }
-
-        if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
-            metric.set_memory_page_faults(memory_page_faults as i32);
-        }
-
-        if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
-            metric.set_memory_major_page_faults(memory_major_page_faults as i32);
-        }
-
-        if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
-            metric.set_network_rx_bytes(network_rx_bytes);
-        }
-
-        if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
-            metric.set_network_rx_errors(network_rx_errors as i32);
-        }
-
-        if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
-            metric.set_network_tx_bytes(network_tx_bytes);
-        }
-
-        if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
-            metric.set_network_tx_errors(network_tx_errors as i32);
-        }
-
-        if let Some(ephemeral_storage_available_bytes) =
-            json["ephemeral-storage"]["availableBytes"].as_i64()
-        {
-            metric.set_ephemeral_storage_available_bytes(ephemeral_storage_available_bytes);
-        }
-
-        if let Some(ephemeral_storage_capacity_bytes) =
-            json["ephemeral-storage"]["capacityBytes"].as_i64()
-        {
-            metric.set_ephemeral_storage_capacity_bytes(ephemeral_storage_capacity_bytes);
-        }
-
-        if let Some(ephemeral_storage_used_bytes) = json["ephemeral-storage"]["usedBytes"].as_i64()
-        {
-            metric.set_ephemeral_storage_used_bytes(ephemeral_storage_used_bytes);
-        }
-
-        if let Some(ephemeral_storage_inodes_free) =
-            json["ephemeral-storage"]["inodesFree"].as_i64()
-        {
-            metric.set_ephemeral_storage_inodes_free(ephemeral_storage_inodes_free);
-        }
-
-        if let Some(ephemeral_storage_inodes) = json["ephemeral-storage"]["inodes"].as_i64() {
-            metric.set_ephemeral_storage_inodes(ephemeral_storage_inodes);
-        }
-
-        if let Some(ephemeral_storage_inodes_used) =
-            json["ephemeral-storage"]["inodesUsed"].as_i64()
-        {
-            metric.set_ephemeral_storage_inodes_used(ephemeral_storage_inodes_used);
-        }
-
-        if let Some(process_count) = json["process_stats"]["process_count"].as_i64() {
-            metric.set_process_count(process_count as i32);
-        }
-
-        if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
-            metric.set_swap_usage_bytes(swap_usage_bytes);
-        }
-        metric
     }
 
-    pub fn from_volume_json(node_name: Option<&str>, json: serde_json::Value) -> KubernetesMetrics {
-        let mut metric = KubernetesMetrics::new();
+    pub fn from_volume_json(
+        node_name: Option<&str>,
+        json: serde_json::Value,
+    ) -> Option<KubernetesMetrics> {
+        match (node_name, json["name"].as_str()) {
+            (Some(node_name), Some(volume_name)) => {
+                let mut metric = KubernetesMetrics::new();
 
-        if let Some(name) = node_name {
-            metric.set_node_name(name.to_string());
+                metric.set_node_name(node_name.to_string());
+                metric.set_volume_name(volume_name.to_string());
+
+                metric.set_timestamp(now_timestamp());
+
+                if let Some(fs_available_bytes) = json["availableBytes"].as_i64() {
+                    metric.set_fs_available_bytes(fs_available_bytes);
+                }
+
+                if let Some(fs_capacity_bytes) = json["capacityBytes"].as_i64() {
+                    metric.set_fs_capacity_bytes(fs_capacity_bytes);
+                }
+
+                if let Some(fs_used_bytes) = json["usedBytes"].as_i64() {
+                    metric.set_fs_used_bytes(fs_used_bytes);
+                }
+
+                if let Some(fs_inodes_free) = json["inodesFree"].as_i64() {
+                    metric.set_fs_inodes_free(fs_inodes_free);
+                }
+
+                if let Some(fs_inodes) = json["inodes"].as_i64() {
+                    metric.set_fs_inodes(fs_inodes);
+                }
+
+                if let Some(fs_inodes_used) = json["inodesUsed"].as_i64() {
+                    metric.set_fs_inodes_used(fs_inodes_used);
+                }
+
+                Some(metric)
+            }
+            _ => None,
         }
+    }
 
-        if let Some(name) = json["name"].as_str() {
-            metric.set_volume_name(name.to_string());
+    pub fn is_node(&self) -> bool {
+        !self.is_pod() && !self.is_volume()
+    }
+
+    pub fn is_pod(&self) -> bool {
+        self.pod_uuid != ""
+    }
+
+    pub fn is_volume(&self) -> bool {
+        self.volume_name != ""
+    }
+
+    pub fn delta(&self, previous: KubernetesMetrics) -> KubernetesMetrics {
+        let mut new = self.clone();
+
+        new.set_network_rx_bytes(new.get_network_rx_bytes() - previous.get_network_rx_bytes());
+
+        new.set_network_rx_errors(new.get_network_rx_errors() - previous.get_network_rx_errors());
+
+        new.set_network_tx_bytes(new.get_network_tx_bytes() - previous.get_network_tx_bytes());
+
+        new.set_network_tx_errors(new.get_network_tx_errors() - previous.get_network_tx_errors());
+
+        new
+    }
+
+    pub fn delta_from(&self, previous: Vec<KubernetesMetrics>) -> Option<KubernetesMetrics> {
+        match previous.iter().find(|&p| {
+            (self.is_pod() && p.pod_uuid == self.pod_uuid)
+                || (self.is_node() && p.node_name == self.node_name)
+                || (self.is_volume() && p.volume_name == self.volume_name)
+        }) {
+            Some(previous) => Some(self.delta(previous.clone())),
+            _ => None,
         }
-
-        metric.set_timestamp(now_timestamp());
-
-        if let Some(fs_available_bytes) = json["availableBytes"].as_i64() {
-            metric.set_fs_available_bytes(fs_available_bytes);
-        }
-
-        if let Some(fs_capacity_bytes) = json["capacityBytes"].as_i64() {
-            metric.set_fs_capacity_bytes(fs_capacity_bytes);
-        }
-
-        if let Some(fs_used_bytes) = json["usedBytes"].as_i64() {
-            metric.set_fs_used_bytes(fs_used_bytes);
-        }
-
-        if let Some(fs_inodes_free) = json["inodesFree"].as_i64() {
-            metric.set_fs_inodes_free(fs_inodes_free);
-        }
-
-        if let Some(fs_inodes) = json["inodes"].as_i64() {
-            metric.set_fs_inodes(fs_inodes);
-        }
-
-        if let Some(fs_inodes_used) = json["inodesUsed"].as_i64() {
-            metric.set_fs_inodes_used(fs_inodes_used);
-        }
-
-        metric
     }
 }
 
@@ -270,18 +323,24 @@ async fn main() -> Result<(), Error> {
     env_logger::init();
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
+    let mut previous = Vec::new();
 
     loop {
         interval.tick().await;
-        run().await.expect("Failed to extract metrics.")
+
+        match run(previous).await {
+            Ok(results) => previous = results,
+            Err(err) => panic!("Failed to extract metrics: {}", err),
+        }
     }
 }
 
-async fn run() -> Result<(), Error> {
+async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
     let kube_client = kube::Client::try_default().await?;
     let api: Api<Node> = Api::all(kube_client.clone());
     let nodes = api.list(&ListParams::default()).await?;
     let mut metrics = Vec::new();
+    let mut payload = Vec::new();
 
     for node in nodes {
         let name = node.name_any();
@@ -294,32 +353,46 @@ async fn run() -> Result<(), Error> {
 
         trace!("JSON: {:?}", kube_response);
 
-        let node_metric = KubernetesMetrics::from_node_json(kube_response["node"].clone());
-        metrics.push(node_metric.clone());
+        if let Some(node_metric) = KubernetesMetrics::from_node_json(kube_response["node"].clone())
+        {
+            if let Some(metric) = node_metric.delta_from(previous.clone()) {
+                payload.push(metric);
+            }
 
-        trace!("Node: {:?}", node_metric);
+            metrics.push(node_metric.clone());
+
+            trace!("Node: {:?}", node_metric);
+        };
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                let pod_metric = KubernetesMetrics::from_pod_json(
+                if let Some(pod_metric) = KubernetesMetrics::from_pod_json(
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
-                );
+                ) {
+                    if let Some(metric) = pod_metric.delta_from(previous.clone()) {
+                        payload.push(metric);
+                    }
 
-                metrics.push(pod_metric.clone());
+                    metrics.push(pod_metric.clone());
 
-                trace!("Pod: {:?}", pod_metric);
+                    trace!("Pod: {:?}", pod_metric);
+                };
 
                 if let Some(volumes) = pod["volume"].as_array() {
                     for volume in volumes {
-                        let volume_metric = KubernetesMetrics::from_volume_json(
+                        if let Some(volume_metric) = KubernetesMetrics::from_volume_json(
                             kube_response["node"]["nodeName"].as_str(),
                             volume.clone(),
-                        );
+                        ) {
+                            if let Some(metric) = volume_metric.delta_from(previous.clone()) {
+                                payload.push(metric);
+                            }
 
-                        metrics.push(volume_metric.clone());
+                            metrics.push(volume_metric.clone());
 
-                        trace!("Volume: {:?}", volume_metric);
+                            trace!("Volume: {:?}", volume_metric);
+                        };
                     }
                 }
             }
@@ -335,7 +408,7 @@ async fn run() -> Result<(), Error> {
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
 
-    for metric in metrics {
+    for metric in &payload {
         let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
         let appsignal_response = reqwest_client
             .post(url.clone())
@@ -346,7 +419,7 @@ async fn run() -> Result<(), Error> {
         debug!("Metric sent: {:?}", appsignal_response);
     }
 
-    Ok(())
+    Ok(metrics)
 }
 
 fn now_timestamp() -> i64 {
@@ -361,24 +434,29 @@ mod tests {
     use std::assert_eq;
     use std::fs::File;
 
+    fn json() -> serde_json::Value {
+        let file =
+            File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
+        serde_json::from_reader(file).expect("Could not parse example file")
+    }
+
     #[test]
     fn extract_node_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_node_json(json!([]));
-
-        assert_eq!("", metric.node_name);
-        assert!(metric.timestamp > 1736429031);
-        assert!(metric.timestamp % 60 == 0);
+        assert_eq!(None, KubernetesMetrics::from_node_json(json!([])));
     }
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let file = File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
-        let json: serde_json::Value =
-            serde_json::from_reader(file).expect("Could not parse example file");
-
-        let metric = KubernetesMetrics::from_node_json(json["node"].clone());
+        let metric = KubernetesMetrics::from_node_json(json()["node"].clone()).unwrap();
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
+
+        assert_eq!(metric.is_node(), true);
+        assert_eq!(metric.is_pod(), false);
+        assert_eq!(metric.is_volume(), false);
+
+        assert!(metric.timestamp > 1736429031);
+        assert!(metric.timestamp % 60 == 0);
 
         assert_eq!(44128133, metric.cpu_usage_nano_cores);
         assert_eq!(83361299610000, metric.cpu_usage_core_nano_seconds);
@@ -418,7 +496,8 @@ mod tests {
               "swapAvailableBytes": 10465738752 as u64,
               "swapUsageBytes": 1024 as u64
           }
-        }));
+        }))
+        .unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!(1024, metric.swap_usage_bytes);
@@ -427,26 +506,25 @@ mod tests {
 
     #[test]
     fn extract_pod_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_pod_json(None, json!([]));
-
-        assert_eq!("", metric.node_name);
-        assert_eq!("", metric.pod_name);
-        assert!(metric.timestamp > 1736429031);
-        assert!(metric.timestamp % 60 == 0);
+        assert_eq!(None, KubernetesMetrics::from_pod_json(None, json!([])));
     }
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let file = File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
-        let json: serde_json::Value =
-            serde_json::from_reader(file).expect("Could not parse example file");
-
-        let metric = KubernetesMetrics::from_pod_json(Some("node"), json["pods"][0].clone());
+        let metric =
+            KubernetesMetrics::from_pod_json(Some("node"), json()["pods"][0].clone()).unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
         assert_eq!("kube-system", metric.pod_namespace);
         assert_eq!("eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4", metric.pod_uuid);
+
+        assert_eq!(metric.is_node(), false);
+        assert_eq!(metric.is_pod(), true);
+        assert_eq!(metric.is_volume(), false);
+
+        assert!(metric.timestamp > 1736429031);
+        assert!(metric.timestamp % 60 == 0);
 
         assert_eq!(409594, metric.cpu_usage_nano_cores);
         assert_eq!(631022780000, metric.cpu_usage_core_nano_seconds);
@@ -476,12 +554,7 @@ mod tests {
 
     #[test]
     fn extract_volume_metrics_with_empty_results() {
-        let metric = KubernetesMetrics::from_volume_json(None, json!([]));
-
-        assert_eq!("", metric.node_name);
-        assert_eq!("", metric.volume_name);
-        assert!(metric.timestamp > 1736429031);
-        assert!(metric.timestamp % 60 == 0);
+        assert_eq!(None, KubernetesMetrics::from_volume_json(None, json!([])));
     }
 
     #[test]
@@ -498,10 +571,115 @@ mod tests {
                 "inodesUsed": 9,
                 "name": "kube-api-access-qz4b4"
             }),
-        );
+        )
+        .unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!("kube-api-access-qz4b4", metric.volume_name);
+
+        assert_eq!(metric.is_node(), false);
+        assert_eq!(metric.is_pod(), false);
+        assert_eq!(metric.is_volume(), true);
+
+        assert!(metric.timestamp > 1736429031);
+        assert!(metric.timestamp % 60 == 0);
+
         assert_eq!(8318251008, metric.fs_available_bytes);
+    }
+
+    #[test]
+    fn delta_subtracts_network_data() {
+        let metric = KubernetesMetrics::from_node_json(json()["node"].clone())
+            .clone()
+            .unwrap();
+
+        let new = metric.delta(metric.clone());
+
+        assert_eq!(0, new.network_rx_bytes);
+        assert_eq!(0, new.network_rx_errors);
+        assert_eq!(0, new.network_tx_bytes);
+        assert_eq!(0, new.network_tx_errors);
+    }
+
+    #[test]
+    fn delta_from_node() {
+        let node = KubernetesMetrics::from_node_json(json!({
+            "nodeName": "node",
+            "network": {
+                "rxBytes": 6011987255 as u64,
+            }
+        }))
+        .unwrap();
+
+        let previous = vec![
+            KubernetesMetrics::from_node_json(json!({
+                "nodeName": "other_node",
+                "network": {
+                    "rxBytes": 6011987255 as u64,
+                }
+            }))
+            .unwrap(),
+            KubernetesMetrics::from_node_json(json!({
+                "nodeName": "node",
+                "network": {
+                    "rxBytes": 6011987250 as u64,
+                }
+            }))
+            .unwrap(),
+        ];
+
+        let new = node.delta_from(previous).unwrap();
+
+        assert_eq!(5, new.network_rx_bytes);
+    }
+
+    #[test]
+    fn delta_from_pod() {
+        let node = KubernetesMetrics::from_pod_json(
+            Some("node"),
+            json!({
+                "podRef": {
+                    "name": "pod",
+                    "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
+                },
+                "network": {
+                    "rxBytes": 2732202444 as u64,
+                }
+            }),
+        )
+        .unwrap();
+
+        let previous = vec![
+            KubernetesMetrics::from_pod_json(
+                Some("node"),
+                json!({
+                    "podRef": {
+                        "name": "pod",
+                        "uid": "differen-tuid-4cbf-9f2d-1ca9e926c7e4",
+                    },
+                    "network": {
+                        "rxBytes": 2732202444 as u64,
+                    }
+                }),
+            )
+            .unwrap(),
+            KubernetesMetrics::from_pod_json(
+                Some("node"),
+                json!({
+                    "podRef": {
+                        "name": "pod",
+                        "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
+                    },
+                    "network": {
+                        "rxBytes": 2732202440 as u64,
+                    }
+                }),
+            )
+            .unwrap(),
+        ];
+
+        let new = node.delta_from(previous).unwrap();
+
+        assert_eq!(4, new.network_rx_bytes);
     }
 }
