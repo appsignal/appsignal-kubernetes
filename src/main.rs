@@ -87,6 +87,10 @@ impl KubernetesMetrics {
                     metric.set_fs_used_bytes(fs_used_bytes);
                 }
 
+                if let (Some(fs_capacity_bytes), Some(fs_used_bytes)) = (json["fs"]["capacityBytes"].as_f64(), json["fs"]["usedBytes"].as_f64()) {
+                    metric.set_disk_usage(fs_used_bytes / fs_capacity_bytes);
+                }
+
                 if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
                     metric.set_fs_inodes_free(fs_inodes_free);
                 }
@@ -479,6 +483,8 @@ mod tests {
         assert_eq!(3148894, metric.fs_inodes_free);
         assert_eq!(3268608, metric.fs_inodes);
         assert_eq!(119714, metric.fs_inodes_used);
+
+        assert_eq!(0.2598043897285553, metric.disk_usage);
 
         assert_eq!(15432, metric.rlimit_maxpid);
         assert_eq!(363, metric.rlimit_curproc);
