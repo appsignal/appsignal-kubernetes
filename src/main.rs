@@ -87,8 +87,15 @@ impl KubernetesMetrics {
                     metric.set_fs_used_bytes(fs_used_bytes);
                 }
 
-                if let (Some(fs_capacity_bytes), Some(fs_used_bytes)) = (json["fs"]["capacityBytes"].as_f64(), json["fs"]["usedBytes"].as_f64()) {
-                    metric.set_disk_usage((fs_used_bytes / fs_capacity_bytes).clamp(0.0, 1.0));
+                if let (Some(fs_capacity_bytes), Some(fs_used_bytes)) = (
+                    json["fs"]["capacityBytes"].as_f64(),
+                    json["fs"]["usedBytes"].as_f64(),
+                ) {
+                    metric.set_disk_usage(
+                        (fs_used_bytes / fs_capacity_bytes * 100.0)
+                            .clamp(0.0, 100.0)
+                            .round() as i32,
+                    );
                 }
 
                 if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
@@ -484,7 +491,7 @@ mod tests {
         assert_eq!(3268608, metric.fs_inodes);
         assert_eq!(119714, metric.fs_inodes_used);
 
-        assert_eq!(0.2598043897285553, metric.disk_usage);
+        assert_eq!(26, metric.disk_usage);
 
         assert_eq!(15432, metric.rlimit_maxpid);
         assert_eq!(363, metric.rlimit_curproc);
@@ -504,7 +511,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(1.0, metric.disk_usage);
+        assert_eq!(100, metric.disk_usage);
     }
 
     #[test]
@@ -518,7 +525,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(0.0, metric.disk_usage);
+        assert_eq!(0, metric.disk_usage);
     }
 
     #[test]
@@ -532,7 +539,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(1.0, metric.disk_usage);
+        assert_eq!(100, metric.disk_usage);
     }
 
     #[test]
@@ -546,7 +553,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(0.0, metric.disk_usage);
+        assert_eq!(0, metric.disk_usage);
     }
 
     #[test]
@@ -560,7 +567,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(0.0, metric.disk_usage);
+        assert_eq!(0, metric.disk_usage);
     }
 
     #[test]
