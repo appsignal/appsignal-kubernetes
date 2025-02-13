@@ -87,6 +87,17 @@ impl KubernetesMetrics {
                     metric.set_fs_used_bytes(fs_used_bytes);
                 }
 
+                if let (Some(fs_capacity_bytes), Some(fs_used_bytes)) = (
+                    json["fs"]["capacityBytes"].as_f64(),
+                    json["fs"]["usedBytes"].as_f64(),
+                ) {
+                    metric.set_disk_usage(
+                        (fs_used_bytes / fs_capacity_bytes * 100.0)
+                            .clamp(0.0, 100.0)
+                            .round() as i32,
+                    );
+                }
+
                 if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
                     metric.set_fs_inodes_free(fs_inodes_free);
                 }
@@ -480,11 +491,83 @@ mod tests {
         assert_eq!(3268608, metric.fs_inodes);
         assert_eq!(119714, metric.fs_inodes_used);
 
+        assert_eq!(26, metric.disk_usage);
+
         assert_eq!(15432, metric.rlimit_maxpid);
         assert_eq!(363, metric.rlimit_curproc);
 
         assert_eq!(42, metric.swap_usage_bytes);
         assert_eq!(42, metric.swap_available_bytes);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_zero_disk_capacity_bytes() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "fs": {
+              "capacityBytes": 0 as u64,
+              "usedBytes": 1024 as u64
+          }
+        }))
+        .unwrap();
+
+        assert_eq!(100, metric.disk_usage);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_zero_disk_used_bytes() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "fs": {
+              "capacityBytes": 1024 as u64,
+              "usedBytes": 0 as u64
+          }
+        }))
+        .unwrap();
+
+        assert_eq!(0, metric.disk_usage);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_more_used_disk_bytes_than_capacity_bytes() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "fs": {
+              "capacityBytes": 1024 as u64,
+              "usedBytes": 2048 as u64
+          }
+        }))
+        .unwrap();
+
+        assert_eq!(100, metric.disk_usage);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_negative_disk_capacity_bytes() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "fs": {
+              "capacityBytes": -1024 as i64,
+              "usedBytes": 1024 as u64
+          }
+        }))
+        .unwrap();
+
+        assert_eq!(0, metric.disk_usage);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_negative_disk_used_bytes() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "fs": {
+              "capacityBytes": 1024 as u64,
+              "usedBytes": -1024 as i64
+          }
+        }))
+        .unwrap();
+
+        assert_eq!(0, metric.disk_usage);
     }
 
     #[test]
