@@ -59,16 +59,15 @@ impl KubernetesMetrics {
                     metric.set_memory_major_page_faults(memory_major_page_faults as i32);
                 }
 
-                if let (Some(memory_available_bytes), Some(memory_usage_bytes)) = (
+                if let (Some(memory_available_bytes), Some(memory_usage_bytes), Some(memory_rss_bytes)) = (
                     json["memory"]["availableBytes"].as_f64(),
                     json["memory"]["usageBytes"].as_f64(),
+                    json["memory"]["rssBytes"].as_f64(),
                 ) {
-                    let memory_capacity_bytes = memory_available_bytes + memory_usage_bytes;
-
                     metric.set_memory_usage(
                         Self::percentage_from(
-                            memory_usage_bytes,
-                            memory_capacity_bytes
+                            memory_usage_bytes - memory_rss_bytes,
+                            memory_usage_bytes + memory_available_bytes - memory_rss_bytes
                         )
                     );
                 }
@@ -498,7 +497,7 @@ mod tests {
         assert_eq!(97153339, metric.memory_page_faults);
         assert_eq!(3780, metric.memory_major_page_faults);
 
-        assert_eq!(60, metric.memory_usage);
+        assert_eq!(52, metric.memory_usage);
 
         assert_eq!(6011987255, metric.network_rx_bytes);
         assert_eq!(42, metric.network_rx_errors);
