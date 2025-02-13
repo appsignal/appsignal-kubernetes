@@ -140,6 +140,18 @@ impl KubernetesMetrics {
                     metric.set_swap_available_bytes(swap_available_bytes);
                 }
 
+                if let (Some(swap_available_bytes), Some(swap_usage_bytes)) = (
+                    json["swap"]["swapAvailableBytes"].as_f64(),
+                    json["swap"]["swapUsageBytes"].as_f64(),
+                ) {
+                    metric.set_swap_usage(
+                        Self::percentage_from(
+                            swap_usage_bytes,
+                            swap_usage_bytes + swap_available_bytes
+                        )
+                    );
+                }
+
                 Some(metric)
             }
             _ => None,
@@ -518,6 +530,8 @@ mod tests {
 
         assert_eq!(42, metric.swap_usage_bytes);
         assert_eq!(42, metric.swap_available_bytes);
+
+        assert_eq!(50, metric.swap_usage);
     }
 
     #[test]
