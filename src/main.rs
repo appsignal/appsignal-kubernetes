@@ -501,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_node_metrics_with_zero_capacity_bytes() {
+    fn extract_node_metrics_with_zero_disk_capacity_bytes() {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
@@ -515,7 +515,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_node_metrics_with_zero_used_bytes() {
+    fn extract_node_metrics_with_zero_disk_used_bytes() {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
@@ -529,7 +529,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_node_metrics_with_more_used_bytes_than_capacity_bytes() {
+    fn extract_node_metrics_with_more_used_disk_bytes_than_capacity_bytes() {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
@@ -543,7 +543,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_node_metrics_with_negative_capacity_bytes() {
+    fn extract_node_metrics_with_negative_disk_capacity_bytes() {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
@@ -557,7 +557,7 @@ mod tests {
     }
 
     #[test]
-    fn extract_node_metrics_with_negative_used_bytes() {
+    fn extract_node_metrics_with_negative_disk_used_bytes() {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
