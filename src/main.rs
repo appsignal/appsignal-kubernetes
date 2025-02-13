@@ -66,9 +66,10 @@ impl KubernetesMetrics {
                     let memory_capacity_bytes = memory_available_bytes + memory_usage_bytes;
 
                     metric.set_memory_usage(
-                        (memory_usage_bytes / memory_capacity_bytes * 100.0)
-                            .clamp(0.0, 100.0)
-                            .round() as i32,
+                        Self::percentage_from(
+                            memory_usage_bytes,
+                            memory_capacity_bytes
+                        )
                     );
                 }
 
@@ -105,9 +106,10 @@ impl KubernetesMetrics {
                     json["fs"]["usedBytes"].as_f64(),
                 ) {
                     metric.set_disk_usage(
-                        (fs_used_bytes / fs_capacity_bytes * 100.0)
-                            .clamp(0.0, 100.0)
-                            .round() as i32,
+                        Self::percentage_from(
+                            fs_used_bytes,
+                            fs_capacity_bytes
+                        )
                     );
                 }
 
@@ -339,6 +341,10 @@ impl KubernetesMetrics {
             Some(previous) => Some(self.delta(previous.clone())),
             _ => None,
         }
+    }
+
+    fn percentage_from(value: f64, total: f64) -> i32 {
+        (value / total * 100.0).clamp(0.0, 100.0).round() as i32
     }
 }
 
