@@ -59,6 +59,19 @@ impl KubernetesMetrics {
                     metric.set_memory_major_page_faults(memory_major_page_faults as i32);
                 }
 
+                if let (Some(memory_available_bytes), Some(memory_usage_bytes)) = (
+                    json["memory"]["availableBytes"].as_f64(),
+                    json["memory"]["usageBytes"].as_f64(),
+                ) {
+                    let memory_capacity_bytes = memory_available_bytes + memory_usage_bytes;
+
+                    metric.set_memory_usage(
+                        (memory_usage_bytes / memory_capacity_bytes * 100.0)
+                            .clamp(0.0, 100.0)
+                            .round() as i32,
+                    );
+                }
+
                 if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
                     metric.set_network_rx_bytes(network_rx_bytes);
                 }
@@ -479,6 +492,8 @@ mod tests {
         assert_eq!(97153339, metric.memory_page_faults);
         assert_eq!(3780, metric.memory_major_page_faults);
 
+        assert_eq!(60, metric.memory_usage);
+
         assert_eq!(6011987255, metric.network_rx_bytes);
         assert_eq!(42, metric.network_rx_errors);
         assert_eq!(5541026205, metric.network_tx_bytes);
@@ -568,6 +583,20 @@ mod tests {
         .unwrap();
 
         assert_eq!(0, metric.disk_usage);
+    }
+
+    #[test]
+    fn extract_node_metrics_with_negative_memory_available_bytes() {
+        let metric = KubernetesMetrics::from_node_json(json!({
+          "nodeName": "node",
+          "memory": {
+              "availableBytes": -1024 as i64,
+              "usageBytes": 512 as u64
+          }
+        }))
+        .unwrap();
+
+        assert_eq!(0, metric.memory_usage);
     }
 
     #[test]
