@@ -117,7 +117,7 @@ task :publish => "build:target:all" do
     "--builder=#{BUILDX_NAME}",
     "--file=Dockerfile",
     "--platform=#{platforms.join(",")}",
-    "--tag #{DOCKER_IMAGE_NAME}:latest",
+    # "--tag #{DOCKER_IMAGE_NAME}:latest",
     "--tag #{tag}"
   ]
   options << "--push" unless ENV["PUBLISH_DRY_RUN"]
@@ -131,6 +131,12 @@ desc "Regenerate the protocol"
 task :protocol do
   `mkdir -p protocol`
   `protoc -I ../appsignal-protocol --rust_out=protocol ../appsignal-protocol/kubernetes.proto`
+end
+
+desc "Update the Helm template files"
+task :update_helm_templates do
+  `mkdir -p charts/appsignal-kubernetes/templates`
+  `cp deployment.yaml charts/appsignal-kubernetes/templates`
 end
 
 def current_version
