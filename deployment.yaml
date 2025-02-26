@@ -15,7 +15,7 @@ spec:
       serviceAccountName: appsignal-kubernetes-service-account
       containers:
       - name: appsignal-kubernetes
-        image: appsignal/appsignal-kubernetes:1.0.0-alpa.1
+        image: appsignal/appsignal-kubernetes:1.0.0-alpha.6
         imagePullPolicy: IfNotPresent
         env:
         - name: APPSIGNAL_API_KEY
