@@ -4,13 +4,18 @@ Extracts Kubenetes Cluster Metrics.
 
 ## Installation
 
-In a Kubernetes cluster, set up your AppSignal API key by creating a secret:
+In a Kubernetes cluster, set up your AppSignal API key (find your _App-specific_ API key in [App settings](https://appsignal.com/redirect-to/app?to=info)) by creating a secret:
 
     kubectl create secret generic appsignal --from-literal=api-key=00000000-0000-0000-0000-000000000000
 
 Then, add the AppSignal deployment to your cluster:
 
     kubectl apply -f https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/main/deployment.yaml
+
+Alternatively, install AppSignal through its Helm chart:
+
+    helm repo add appsignal-kubernetes https://appsignal.github.io/appsignal-kubernetes
+    helm install appsignal-kubernetes/appsignal-kubernetes --generate-name
 
 AppSignal for Kubernetes will start sending Kubernetes automatically.
 
