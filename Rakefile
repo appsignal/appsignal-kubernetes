@@ -133,6 +133,12 @@ task :protocol do
   `protoc -I ../appsignal-protocol --rust_out=protocol ../appsignal-protocol/kubernetes.proto`
 end
 
+desc "Update the Helm template files"
+task :update_helm_templates do
+  `mkdir -p charts/appsignal-kubernetes/templates`
+  `cp deployment.yaml charts/appsignal-kubernetes/templates`
+end
+
 def current_version
   Command.run("script/read_version", :output => false).strip
 end
