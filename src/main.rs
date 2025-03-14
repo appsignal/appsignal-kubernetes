@@ -3,7 +3,7 @@ extern crate time;
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
-use log::{debug, trace, warn};
+use log::{info, trace, warn};
 use protobuf::Message;
 use reqwest::{Client, Url};
 use std::env;
@@ -490,7 +490,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
             .send()
             .await?;
 
-        debug!("Metric sent: {:?}", appsignal_response);
+        info!("Metric sent: {:?}", appsignal_response);
     }
 
     Ok(metrics)
