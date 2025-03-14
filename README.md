@@ -16,7 +16,7 @@ appsignal-kubernetes` to see the charts.
 To install the appsignal-kubernetes chart:
 
 ```
-helm install my-appsignal-kubernetes appsignal-kubernetes/appsignal-kubernetes
+helm install appsignal-kubernetes/appsignal-kubernetes --generate-name
 ```
 
 To uninstall the chart:
