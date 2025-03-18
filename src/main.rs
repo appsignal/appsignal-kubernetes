@@ -3,7 +3,7 @@ extern crate time;
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use protobuf::Message;
 use reqwest::{Client, Url};
 use std::env;
@@ -376,8 +376,11 @@ impl KubernetesMetrics {
 
     fn extract(data: &serde_json::Value, path: &str) -> Option<serde_json::Value> {
         let value = data.pointer(path);
+        let number = value?.as_i64()?;
 
-        if value?.as_i64()?.is_negative() {
+        if number.is_negative() {
+            warn!("Unexpected negative value for {}: {}", path, number);
+
             None
         } else {
             value.cloned()
