@@ -23,6 +23,8 @@ spec:
             secretKeyRef:
               name: appsignal
               key: api-key
+        - name: RUST_LOG
+          value: info
 ---
 apiVersion: v1
 kind: ServiceAccount
