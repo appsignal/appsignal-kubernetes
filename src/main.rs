@@ -375,7 +375,13 @@ impl KubernetesMetrics {
     }
 
     fn extract(data: &serde_json::Value, path: &str) -> Option<serde_json::Value> {
-        data.pointer(path).cloned()
+        let value = data.pointer(path);
+
+        if value?.as_i64()?.is_negative() {
+            None
+        } else {
+            value.cloned()
+        }
     }
 
     fn percentage_from(value: f64, total: f64) -> i32 {
@@ -499,9 +505,14 @@ mod tests {
     use std::assert_eq;
     use std::fs::File;
 
-    fn json() -> serde_json::Value {
+    fn digitalocean_fixture() -> serde_json::Value {
         let file =
             File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
+        serde_json::from_reader(file).expect("Could not parse example file")
+    }
+
+    fn negative_fixture() -> serde_json::Value {
+        let file = File::open("test/fixtures/negative.json").expect("Could not open example file");
         serde_json::from_reader(file).expect("Could not parse example file")
     }
 
@@ -512,7 +523,8 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let metric = KubernetesMetrics::from_node_json(json()["node"].clone()).unwrap();
+        let metric =
+            KubernetesMetrics::from_node_json(digitalocean_fixture()["node"].clone()).unwrap();
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
 
@@ -660,14 +672,58 @@ mod tests {
     }
 
     #[test]
+    fn extract_node_metrics_with_negative_results() {
+        let metric = KubernetesMetrics::from_node_json(negative_fixture()["node"].clone()).unwrap();
+
+        assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
+
+        assert_eq!(0, metric.cpu_usage_nano_cores);
+        assert_eq!(0, metric.cpu_usage_core_nano_seconds);
+
+        assert_eq!(0, metric.memory_available_bytes);
+        assert_eq!(0, metric.memory_usage_bytes);
+        assert_eq!(0, metric.memory_working_set_bytes);
+        assert_eq!(0, metric.memory_rss_bytes);
+        assert_eq!(0, metric.memory_page_faults);
+        assert_eq!(0, metric.memory_major_page_faults);
+
+        assert_eq!(0, metric.memory_usage);
+
+        assert_eq!(0, metric.network_rx_bytes);
+        assert_eq!(0, metric.network_rx_errors);
+        assert_eq!(0, metric.network_tx_bytes);
+        assert_eq!(0, metric.network_tx_errors);
+
+        assert_eq!(0, metric.fs_available_bytes);
+        assert_eq!(0, metric.fs_capacity_bytes);
+        assert_eq!(0, metric.fs_used_bytes);
+        assert_eq!(0, metric.fs_inodes_free);
+        assert_eq!(0, metric.fs_inodes);
+        assert_eq!(0, metric.fs_inodes_used);
+
+        assert_eq!(0, metric.disk_usage);
+
+        assert_eq!(0, metric.rlimit_maxpid);
+        assert_eq!(0, metric.rlimit_curproc);
+
+        assert_eq!(0, metric.swap_usage_bytes);
+        assert_eq!(0, metric.swap_available_bytes);
+
+        assert_eq!(0, metric.swap_usage);
+    }
+
+    #[test]
     fn extract_pod_metrics_with_empty_results() {
         assert_eq!(None, KubernetesMetrics::from_pod_json(None, json!([])));
     }
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let metric =
-            KubernetesMetrics::from_pod_json(Some("node"), json()["pods"][0].clone()).unwrap();
+        let metric = KubernetesMetrics::from_pod_json(
+            Some("node"),
+            digitalocean_fixture()["pods"][0].clone(),
+        )
+        .unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
@@ -744,7 +800,7 @@ mod tests {
 
     #[test]
     fn delta_subtracts_network_data() {
-        let metric = KubernetesMetrics::from_node_json(json()["node"].clone())
+        let metric = KubernetesMetrics::from_node_json(digitalocean_fixture()["node"].clone())
             .clone()
             .unwrap();
 
@@ -836,5 +892,37 @@ mod tests {
         let new = node.delta_from(previous).unwrap();
 
         assert_eq!(4, new.network_rx_bytes);
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_negative_results() {
+        let metric =
+            KubernetesMetrics::from_pod_json(Some("node"), negative_fixture()["pods"][0].clone())
+                .unwrap();
+
+        assert_eq!(0, metric.cpu_usage_nano_cores);
+        assert_eq!(0, metric.cpu_usage_core_nano_seconds);
+
+        assert_eq!(0, metric.memory_usage_bytes);
+        assert_eq!(0, metric.memory_working_set_bytes);
+        assert_eq!(0, metric.memory_rss_bytes);
+        assert_eq!(0, metric.memory_page_faults);
+        assert_eq!(0, metric.memory_major_page_faults);
+
+        assert_eq!(0, metric.network_rx_bytes);
+        assert_eq!(0, metric.network_rx_errors);
+        assert_eq!(0, metric.network_tx_bytes);
+        assert_eq!(0, metric.network_tx_errors);
+
+        assert_eq!(0, metric.ephemeral_storage_available_bytes);
+        assert_eq!(0, metric.ephemeral_storage_capacity_bytes);
+        assert_eq!(0, metric.ephemeral_storage_used_bytes);
+        assert_eq!(0, metric.ephemeral_storage_inodes_free);
+        assert_eq!(0, metric.ephemeral_storage_inodes);
+        assert_eq!(0, metric.ephemeral_storage_inodes_used);
+
+        assert_eq!(0, metric.process_count);
+
+        assert_eq!(0, metric.swap_usage_bytes);
     }
 }
