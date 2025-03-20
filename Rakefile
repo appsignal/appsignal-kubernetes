@@ -4,7 +4,7 @@ DOCKER_IMAGE_NAME = "appsignal/appsignal-kubernetes".freeze
 BUILDX_NAME = "appsignal-kubernetes-builder".freeze
 RELEASE_DIR = "release".freeze
 EXECUTABLE_NAME = "appsignal-kubernetes".freeze
-CROSS_VERSION = "0.2.5".freeze
+CROSS_VERSION = "0.2.4".freeze
 
 TARGETS = {
   "x86_64-unknown-linux-musl" => {
@@ -43,7 +43,7 @@ namespace :build do
         end
       next if output.include?("cross #{CROSS_VERSION}")
 
-      Command.run("cargo install cross --version #{CROSS_VERSION}")
+      Command.run("cargo install cross --locked --version #{CROSS_VERSION}")
     end
   end
 
@@ -125,6 +125,13 @@ task :publish => "build:target:all" do
 
   puts
   puts "Published images '#{tag}' and 'latest'"
+end
+
+desc "Run Rust unit tests"
+task :test => "build:prepare" do
+  TARGETS.each do |target_triple, config|
+    Command.run("cross test --release --target #{target_triple}")
+  end
 end
 
 desc "Regenerate the protocol"
