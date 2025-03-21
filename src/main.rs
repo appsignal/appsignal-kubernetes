@@ -59,17 +59,19 @@ impl KubernetesMetrics {
                     metric.set_memory_major_page_faults(memory_major_page_faults as i32);
                 }
 
-                if let (Some(memory_available_bytes), Some(memory_usage_bytes), Some(memory_rss_bytes)) = (
+                if let (
+                    Some(memory_available_bytes),
+                    Some(memory_usage_bytes),
+                    Some(memory_rss_bytes),
+                ) = (
                     json["memory"]["availableBytes"].as_f64(),
                     json["memory"]["usageBytes"].as_f64(),
                     json["memory"]["rssBytes"].as_f64(),
                 ) {
-                    metric.set_memory_usage(
-                        Self::percentage_from(
-                            memory_usage_bytes - memory_rss_bytes,
-                            memory_usage_bytes + memory_available_bytes - memory_rss_bytes
-                        )
-                    );
+                    metric.set_memory_usage(Self::percentage_from(
+                        memory_usage_bytes - memory_rss_bytes,
+                        memory_usage_bytes + memory_available_bytes - memory_rss_bytes,
+                    ));
                 }
 
                 if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
@@ -104,12 +106,7 @@ impl KubernetesMetrics {
                     json["fs"]["capacityBytes"].as_f64(),
                     json["fs"]["usedBytes"].as_f64(),
                 ) {
-                    metric.set_disk_usage(
-                        Self::percentage_from(
-                            fs_used_bytes,
-                            fs_capacity_bytes
-                        )
-                    );
+                    metric.set_disk_usage(Self::percentage_from(fs_used_bytes, fs_capacity_bytes));
                 }
 
                 if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
@@ -144,12 +141,10 @@ impl KubernetesMetrics {
                     json["swap"]["swapAvailableBytes"].as_f64(),
                     json["swap"]["swapUsageBytes"].as_f64(),
                 ) {
-                    metric.set_swap_usage(
-                        Self::percentage_from(
-                            swap_usage_bytes,
-                            swap_usage_bytes + swap_available_bytes
-                        )
-                    );
+                    metric.set_swap_usage(Self::percentage_from(
+                        swap_usage_bytes,
+                        swap_usage_bytes + swap_available_bytes,
+                    ));
                 }
 
                 Some(metric)
@@ -322,11 +317,11 @@ impl KubernetesMetrics {
     }
 
     pub fn is_pod(&self) -> bool {
-        self.pod_uuid != ""
+        !self.pod_uuid.is_empty()
     }
 
     pub fn is_volume(&self) -> bool {
-        self.volume_name != ""
+        !self.volume_name.is_empty()
     }
 
     pub fn delta(&self, previous: KubernetesMetrics) -> KubernetesMetrics {
@@ -344,14 +339,14 @@ impl KubernetesMetrics {
     }
 
     pub fn delta_from(&self, previous: Vec<KubernetesMetrics>) -> Option<KubernetesMetrics> {
-        match previous.iter().find(|&p| {
-            (self.is_pod() && p.pod_uuid == self.pod_uuid)
-                || (self.is_node() && p.node_name == self.node_name)
-                || (self.is_volume() && p.volume_name == self.volume_name)
-        }) {
-            Some(previous) => Some(self.delta(previous.clone())),
-            _ => None,
-        }
+        previous
+            .iter()
+            .find(|&p| {
+                (self.is_pod() && p.pod_uuid == self.pod_uuid)
+                    || (self.is_node() && p.node_name == self.node_name)
+                    || (self.is_volume() && p.volume_name == self.volume_name)
+            })
+            .map(|previous| self.delta(previous.clone()))
     }
 
     fn percentage_from(value: f64, total: f64) -> i32 {
@@ -492,9 +487,9 @@ mod tests {
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
 
-        assert_eq!(metric.is_node(), true);
-        assert_eq!(metric.is_pod(), false);
-        assert_eq!(metric.is_volume(), false);
+        assert!(metric.is_node());
+        assert!(!metric.is_pod());
+        assert!(!metric.is_volume());
 
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
@@ -539,8 +534,8 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
-              "capacityBytes": 0 as u64,
-              "usedBytes": 1024 as u64
+              "capacityBytes": 0_u64,
+              "usedBytes": 1024_u64
           }
         }))
         .unwrap();
@@ -553,8 +548,8 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
-              "capacityBytes": 1024 as u64,
-              "usedBytes": 0 as u64
+              "capacityBytes": 1024_u64,
+              "usedBytes": 0_u64
           }
         }))
         .unwrap();
@@ -567,8 +562,8 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
-              "capacityBytes": 1024 as u64,
-              "usedBytes": 2048 as u64
+              "capacityBytes": 1024_u64,
+              "usedBytes": 2048_u64
           }
         }))
         .unwrap();
@@ -581,8 +576,8 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
-              "capacityBytes": -1024 as i64,
-              "usedBytes": 1024 as u64
+              "capacityBytes": -1024_i64,
+              "usedBytes": 1024_u64
           }
         }))
         .unwrap();
@@ -595,8 +590,8 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "fs": {
-              "capacityBytes": 1024 as u64,
-              "usedBytes": -1024 as i64
+              "capacityBytes": 1024_u64,
+              "usedBytes": -1024_i64
           }
         }))
         .unwrap();
@@ -609,8 +604,8 @@ mod tests {
         let metric = KubernetesMetrics::from_node_json(json!({
           "nodeName": "node",
           "memory": {
-              "availableBytes": -1024 as i64,
-              "usageBytes": 512 as u64
+              "availableBytes": -1024_i64,
+              "usageBytes": 512_u64
           }
         }))
         .unwrap();
@@ -624,8 +619,8 @@ mod tests {
           "nodeName": "node",
           "swap": {
               "time": "2025-01-31T10:57:18Z",
-              "swapAvailableBytes": 10465738752 as u64,
-              "swapUsageBytes": 1024 as u64
+              "swapAvailableBytes": 10465738752_u64,
+              "swapUsageBytes": 1024_u64
           }
         }))
         .unwrap();
@@ -650,9 +645,9 @@ mod tests {
         assert_eq!("kube-system", metric.pod_namespace);
         assert_eq!("eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4", metric.pod_uuid);
 
-        assert_eq!(metric.is_node(), false);
-        assert_eq!(metric.is_pod(), true);
-        assert_eq!(metric.is_volume(), false);
+        assert!(!metric.is_node());
+        assert!(metric.is_pod());
+        assert!(!metric.is_volume());
 
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
@@ -694,8 +689,8 @@ mod tests {
             Some("node"),
             json!({
                 "time": "2024-10-08T13:42:48Z",
-                "availableBytes": 8318251008 as u64,
-                "capacityBytes": 8318263296 as u64,
+                "availableBytes": 8318251008_u64,
+                "capacityBytes": 8318263296_u64,
                 "usedBytes": 12288,
                 "inodesFree": 1015404,
                 "inodes": 1015413,
@@ -708,9 +703,9 @@ mod tests {
         assert_eq!("node", metric.node_name);
         assert_eq!("kube-api-access-qz4b4", metric.volume_name);
 
-        assert_eq!(metric.is_node(), false);
-        assert_eq!(metric.is_pod(), false);
-        assert_eq!(metric.is_volume(), true);
+        assert!(!metric.is_node());
+        assert!(!metric.is_pod());
+        assert!(metric.is_volume());
 
         assert!(metric.timestamp > 1736429031);
         assert!(metric.timestamp % 60 == 0);
@@ -737,7 +732,7 @@ mod tests {
         let node = KubernetesMetrics::from_node_json(json!({
             "nodeName": "node",
             "network": {
-                "rxBytes": 6011987255 as u64,
+                "rxBytes": 6011987255_u64,
             }
         }))
         .unwrap();
@@ -746,14 +741,14 @@ mod tests {
             KubernetesMetrics::from_node_json(json!({
                 "nodeName": "other_node",
                 "network": {
-                    "rxBytes": 6011987255 as u64,
+                    "rxBytes": 6011987255_u64,
                 }
             }))
             .unwrap(),
             KubernetesMetrics::from_node_json(json!({
                 "nodeName": "node",
                 "network": {
-                    "rxBytes": 6011987250 as u64,
+                    "rxBytes": 6011987250_u64,
                 }
             }))
             .unwrap(),
@@ -774,7 +769,7 @@ mod tests {
                     "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
                 },
                 "network": {
-                    "rxBytes": 2732202444 as u64,
+                    "rxBytes": 2732202444_u64,
                 }
             }),
         )
@@ -789,7 +784,7 @@ mod tests {
                         "uid": "differen-tuid-4cbf-9f2d-1ca9e926c7e4",
                     },
                     "network": {
-                        "rxBytes": 2732202444 as u64,
+                        "rxBytes": 2732202444_u64,
                     }
                 }),
             )
@@ -802,7 +797,7 @@ mod tests {
                         "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
                     },
                     "network": {
-                        "rxBytes": 2732202440 as u64,
+                        "rxBytes": 2732202440_u64,
                     }
                 }),
             )
