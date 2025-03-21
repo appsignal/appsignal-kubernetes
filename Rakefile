@@ -127,13 +127,6 @@ task :publish => "build:target:all" do
   puts "Published images '#{tag}' and 'latest'"
 end
 
-desc "Run Rust unit tests"
-task :test => "build:prepare" do
-  TARGETS.each do |target_triple, config|
-    Command.run("cross test --release --target #{target_triple}")
-  end
-end
-
 desc "Regenerate the protocol"
 task :protocol do
   `mkdir -p protocol`
