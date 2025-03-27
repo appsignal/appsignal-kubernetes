@@ -1,11 +1,11 @@
 extern crate time;
 
+use appsignal_transmitter::reqwest::{Client, Url};
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
 use log::{info, trace, warn};
 use protobuf::Message;
-use reqwest::{Client, Url};
 use std::env;
 use std::time::Duration;
 
