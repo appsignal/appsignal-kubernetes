@@ -3,7 +3,7 @@ extern crate time;
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
-use log::{debug, trace, warn};
+use log::{info, trace, warn};
 use protobuf::Message;
 use reqwest::{Client, Url};
 use std::env;
@@ -392,9 +392,31 @@ impl KubernetesMetrics {
     }
 }
 
+#[derive(Debug)]
+struct Config {
+    endpoint: String,
+    api_key: String,
+}
+
+impl Config {
+    fn from_env() -> Config {
+        Config {
+            api_key: env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set"),
+            endpoint: env::var("APPSIGNAL_ENDPOINT")
+                .unwrap_or("https://appsignal-endpoint.net".to_owned()),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env_logger::init();
+
+    info!(
+        "Starting Appsignal for Kubernetes with configuration: {:?}",
+        Config::from_env()
+    );
+
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
     let mut previous = Vec::new();
@@ -473,11 +495,9 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
         };
     }
 
-    let endpoint =
-        env::var("APPSIGNAL_ENDPOINT").unwrap_or("https://appsignal-endpoint.net".to_owned());
-    let api_key = env::var("APPSIGNAL_API_KEY").expect("APPSIGNAL_API_KEY not set");
-    let base = Url::parse(&endpoint).expect("Could not parse endpoint");
-    let path = format!("metrics/kubernetes?api_key={}", api_key);
+    let config = Config::from_env();
+    let base = Url::parse(&config.endpoint).expect("Could not parse endpoint");
+    let path = format!("metrics/kubernetes?api_key={}", config.api_key);
     let url = base.join(&path).expect("Could not build request URL");
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
@@ -490,7 +510,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
             .send()
             .await?;
 
-        debug!("Metric sent: {:?}", appsignal_response);
+        info!("Metric sent: {:?}", appsignal_response);
     }
 
     Ok(metrics)
