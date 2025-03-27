@@ -3,7 +3,7 @@ extern crate time;
 use http::Request;
 use k8s_openapi::api::core::v1::Node;
 use kube::{api::ListParams, Api, ResourceExt};
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use protobuf::Message;
 use reqwest::{Client, Url};
 use std::env;
@@ -25,37 +25,44 @@ impl KubernetesMetrics {
 
                 metric.set_timestamp(now_timestamp());
 
-                if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
+                if let Some(cpu_usage_nano_cores) = Self::extract_i64(&json, "/cpu/usageNanoCores")
+                {
                     metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
                 }
 
                 if let Some(cpu_usage_core_nano_seconds) =
-                    json["cpu"]["usageCoreNanoSeconds"].as_i64()
+                    Self::extract_i64(&json, "/cpu/usageCoreNanoSeconds")
                 {
                     metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
                 }
 
-                if let Some(memory_available_bytes) = json["memory"]["availableBytes"].as_i64() {
+                if let Some(memory_available_bytes) =
+                    Self::extract_i64(&json, "/memory/availableBytes")
+                {
                     metric.set_memory_available_bytes(memory_available_bytes);
                 }
 
-                if let Some(memory_usage_bytes) = json["memory"]["usageBytes"].as_i64() {
+                if let Some(memory_usage_bytes) = Self::extract_i64(&json, "/memory/usageBytes") {
                     metric.set_memory_usage_bytes(memory_usage_bytes);
                 }
 
-                if let Some(memory_working_set_bytes) = json["memory"]["workingSetBytes"].as_i64() {
+                if let Some(memory_working_set_bytes) =
+                    Self::extract_i64(&json, "/memory/workingSetBytes")
+                {
                     metric.set_memory_working_set_bytes(memory_working_set_bytes);
                 }
 
-                if let Some(memory_rss_bytes) = json["memory"]["rssBytes"].as_i64() {
+                if let Some(memory_rss_bytes) = Self::extract_i64(&json, "/memory/rssBytes") {
                     metric.set_memory_rss_bytes(memory_rss_bytes);
                 }
 
-                if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
+                if let Some(memory_page_faults) = Self::extract_i64(&json, "/memory/pageFaults") {
                     metric.set_memory_page_faults(memory_page_faults as i32);
                 }
 
-                if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
+                if let Some(memory_major_page_faults) =
+                    Self::extract_i64(&json, "/memory/majorPageFaults")
+                {
                     metric.set_memory_major_page_faults(memory_major_page_faults as i32);
                 }
 
@@ -64,9 +71,9 @@ impl KubernetesMetrics {
                     Some(memory_usage_bytes),
                     Some(memory_rss_bytes),
                 ) = (
-                    json["memory"]["availableBytes"].as_f64(),
-                    json["memory"]["usageBytes"].as_f64(),
-                    json["memory"]["rssBytes"].as_f64(),
+                    Self::extract_f64(&json, "/memory/availableBytes"),
+                    Self::extract_f64(&json, "/memory/usageBytes"),
+                    Self::extract_f64(&json, "/memory/rssBytes"),
                 ) {
                     metric.set_memory_usage(Self::percentage_from(
                         memory_usage_bytes - memory_rss_bytes,
@@ -74,72 +81,74 @@ impl KubernetesMetrics {
                     ));
                 }
 
-                if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
+                if let Some(network_rx_bytes) = Self::extract_i64(&json, "/network/rxBytes") {
                     metric.set_network_rx_bytes(network_rx_bytes);
                 }
 
-                if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
+                if let Some(network_rx_errors) = Self::extract_i64(&json, "/network/rxErrors") {
                     metric.set_network_rx_errors(network_rx_errors as i32);
                 }
 
-                if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
+                if let Some(network_tx_bytes) = Self::extract_i64(&json, "/network/txBytes") {
                     metric.set_network_tx_bytes(network_tx_bytes);
                 }
 
-                if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
+                if let Some(network_tx_errors) = Self::extract_i64(&json, "/network/txErrors") {
                     metric.set_network_tx_errors(network_tx_errors as i32);
                 }
 
-                if let Some(fs_available_bytes) = json["fs"]["availableBytes"].as_i64() {
+                if let Some(fs_available_bytes) = Self::extract_i64(&json, "/fs/availableBytes") {
                     metric.set_fs_available_bytes(fs_available_bytes);
                 }
 
-                if let Some(fs_capacity_bytes) = json["fs"]["capacityBytes"].as_i64() {
+                if let Some(fs_capacity_bytes) = Self::extract_i64(&json, "/fs/capacityBytes") {
                     metric.set_fs_capacity_bytes(fs_capacity_bytes);
                 }
 
-                if let Some(fs_used_bytes) = json["fs"]["usedBytes"].as_i64() {
+                if let Some(fs_used_bytes) = Self::extract_i64(&json, "/fs/usedBytes") {
                     metric.set_fs_used_bytes(fs_used_bytes);
                 }
 
                 if let (Some(fs_capacity_bytes), Some(fs_used_bytes)) = (
-                    json["fs"]["capacityBytes"].as_f64(),
-                    json["fs"]["usedBytes"].as_f64(),
+                    Self::extract_f64(&json, "/fs/capacityBytes"),
+                    Self::extract_f64(&json, "/fs/usedBytes"),
                 ) {
                     metric.set_disk_usage(Self::percentage_from(fs_used_bytes, fs_capacity_bytes));
                 }
 
-                if let Some(fs_inodes_free) = json["fs"]["inodesFree"].as_i64() {
+                if let Some(fs_inodes_free) = Self::extract_i64(&json, "/fs/inodesFree") {
                     metric.set_fs_inodes_free(fs_inodes_free);
                 }
 
-                if let Some(fs_inodes) = json["fs"]["inodes"].as_i64() {
+                if let Some(fs_inodes) = Self::extract_i64(&json, "/fs/inodes") {
                     metric.set_fs_inodes(fs_inodes);
                 }
 
-                if let Some(fs_inodes_used) = json["fs"]["inodesUsed"].as_i64() {
+                if let Some(fs_inodes_used) = Self::extract_i64(&json, "/fs/inodesUsed") {
                     metric.set_fs_inodes_used(fs_inodes_used);
                 }
 
-                if let Some(rlimit_maxpid) = json["rlimit"]["maxpid"].as_i64() {
+                if let Some(rlimit_maxpid) = Self::extract_i64(&json, "/rlimit/maxpid") {
                     metric.set_rlimit_maxpid(rlimit_maxpid as i32);
                 }
 
-                if let Some(rlimit_curproc) = json["rlimit"]["curproc"].as_i64() {
+                if let Some(rlimit_curproc) = Self::extract_i64(&json, "/rlimit/curproc") {
                     metric.set_rlimit_curproc(rlimit_curproc as i32);
                 }
 
-                if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
+                if let Some(swap_usage_bytes) = Self::extract_i64(&json, "/swap/swapUsageBytes") {
                     metric.set_swap_usage_bytes(swap_usage_bytes);
                 }
 
-                if let Some(swap_available_bytes) = json["swap"]["swapAvailableBytes"].as_i64() {
+                if let Some(swap_available_bytes) =
+                    Self::extract_i64(&json, "/swap/swapAvailableBytes")
+                {
                     metric.set_swap_available_bytes(swap_available_bytes);
                 }
 
                 if let (Some(swap_available_bytes), Some(swap_usage_bytes)) = (
-                    json["swap"]["swapAvailableBytes"].as_f64(),
-                    json["swap"]["swapUsageBytes"].as_f64(),
+                    Self::extract_f64(&json, "/swap/swapAvailableBytes"),
+                    Self::extract_f64(&json, "/swap/swapUsageBytes"),
                 ) {
                     metric.set_swap_usage(Self::percentage_from(
                         swap_usage_bytes,
@@ -174,92 +183,100 @@ impl KubernetesMetrics {
 
                 metric.set_timestamp(now_timestamp());
 
-                if let Some(cpu_usage_nano_cores) = json["cpu"]["usageNanoCores"].as_i64() {
+                if let Some(cpu_usage_nano_cores) = Self::extract_i64(&json, "/cpu/usageNanoCores")
+                {
                     metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
                 }
 
                 if let Some(cpu_usage_core_nano_seconds) =
-                    json["cpu"]["usageCoreNanoSeconds"].as_i64()
+                    Self::extract_i64(&json, "/cpu/usageCoreNanoSeconds")
                 {
                     metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
                 }
 
-                if let Some(memory_usage_bytes) = json["memory"]["usageBytes"].as_i64() {
+                if let Some(memory_usage_bytes) = Self::extract_i64(&json, "/memory/usageBytes") {
                     metric.set_memory_usage_bytes(memory_usage_bytes);
                 }
 
-                if let Some(memory_working_set_bytes) = json["memory"]["workingSetBytes"].as_i64() {
+                if let Some(memory_working_set_bytes) =
+                    Self::extract_i64(&json, "/memory/workingSetBytes")
+                {
                     metric.set_memory_working_set_bytes(memory_working_set_bytes);
                 }
 
-                if let Some(memory_rss_bytes) = json["memory"]["rssBytes"].as_i64() {
+                if let Some(memory_rss_bytes) = Self::extract_i64(&json, "/memory/rssBytes") {
                     metric.set_memory_rss_bytes(memory_rss_bytes);
                 }
 
-                if let Some(memory_page_faults) = json["memory"]["pageFaults"].as_i64() {
+                if let Some(memory_page_faults) = Self::extract_i64(&json, "/memory/pageFaults") {
                     metric.set_memory_page_faults(memory_page_faults as i32);
                 }
 
-                if let Some(memory_major_page_faults) = json["memory"]["majorPageFaults"].as_i64() {
+                if let Some(memory_major_page_faults) =
+                    Self::extract_i64(&json, "/memory/majorPageFaults")
+                {
                     metric.set_memory_major_page_faults(memory_major_page_faults as i32);
                 }
 
-                if let Some(network_rx_bytes) = json["network"]["rxBytes"].as_i64() {
+                if let Some(network_rx_bytes) = Self::extract_i64(&json, "/network/rxBytes") {
                     metric.set_network_rx_bytes(network_rx_bytes);
                 }
 
-                if let Some(network_rx_errors) = json["network"]["rxErrors"].as_i64() {
+                if let Some(network_rx_errors) = Self::extract_i64(&json, "/network/rxErrors") {
                     metric.set_network_rx_errors(network_rx_errors as i32);
                 }
 
-                if let Some(network_tx_bytes) = json["network"]["txBytes"].as_i64() {
+                if let Some(network_tx_bytes) = Self::extract_i64(&json, "/network/txBytes") {
                     metric.set_network_tx_bytes(network_tx_bytes);
                 }
 
-                if let Some(network_tx_errors) = json["network"]["txErrors"].as_i64() {
+                if let Some(network_tx_errors) = Self::extract_i64(&json, "/network/txErrors") {
                     metric.set_network_tx_errors(network_tx_errors as i32);
                 }
 
                 if let Some(ephemeral_storage_available_bytes) =
-                    json["ephemeral-storage"]["availableBytes"].as_i64()
+                    Self::extract_i64(&json, "/ephemeral-storage/availableBytes")
                 {
                     metric.set_ephemeral_storage_available_bytes(ephemeral_storage_available_bytes);
                 }
 
                 if let Some(ephemeral_storage_capacity_bytes) =
-                    json["ephemeral-storage"]["capacityBytes"].as_i64()
+                    Self::extract_i64(&json, "/ephemeral-storage/capacityBytes")
                 {
                     metric.set_ephemeral_storage_capacity_bytes(ephemeral_storage_capacity_bytes);
                 }
 
                 if let Some(ephemeral_storage_used_bytes) =
-                    json["ephemeral-storage"]["usedBytes"].as_i64()
+                    Self::extract_i64(&json, "/ephemeral-storage/usedBytes")
                 {
                     metric.set_ephemeral_storage_used_bytes(ephemeral_storage_used_bytes);
                 }
 
                 if let Some(ephemeral_storage_inodes_free) =
-                    json["ephemeral-storage"]["inodesFree"].as_i64()
+                    Self::extract_i64(&json, "/ephemeral-storage/inodesFree")
                 {
                     metric.set_ephemeral_storage_inodes_free(ephemeral_storage_inodes_free);
                 }
 
-                if let Some(ephemeral_storage_inodes) = json["ephemeral-storage"]["inodes"].as_i64()
+                if let Some(ephemeral_storage_inodes) =
+                    Self::extract_i64(&json, "/ephemeral-storage/inodes")
                 {
                     metric.set_ephemeral_storage_inodes(ephemeral_storage_inodes);
                 }
 
                 if let Some(ephemeral_storage_inodes_used) =
-                    json["ephemeral-storage"]["inodesUsed"].as_i64()
+                    Self::extract_i64(&json, "/ephemeral-storage/inodesUsed")
                 {
                     metric.set_ephemeral_storage_inodes_used(ephemeral_storage_inodes_used);
                 }
 
-                if let Some(process_count) = json["process_stats"]["process_count"].as_i64() {
+                if let Some(process_count) =
+                    Self::extract_i64(&json, "/process_stats/process_count")
+                {
                     metric.set_process_count(process_count as i32);
                 }
 
-                if let Some(swap_usage_bytes) = json["swap"]["swapUsageBytes"].as_i64() {
+                if let Some(swap_usage_bytes) = Self::extract_i64(&json, "/swap/swapUsageBytes") {
                     metric.set_swap_usage_bytes(swap_usage_bytes);
                 }
 
@@ -347,6 +364,27 @@ impl KubernetesMetrics {
                     || (self.is_volume() && p.volume_name == self.volume_name)
             })
             .map(|previous| self.delta(previous.clone()))
+    }
+
+    fn extract_i64(data: &serde_json::Value, path: &str) -> Option<i64> {
+        Self::extract(data, path)?.as_i64()
+    }
+
+    fn extract_f64(data: &serde_json::Value, path: &str) -> Option<f64> {
+        Self::extract(data, path)?.as_f64()
+    }
+
+    fn extract(data: &serde_json::Value, path: &str) -> Option<serde_json::Value> {
+        let value = data.pointer(path);
+        let number = value?.as_i64()?;
+
+        if number.is_negative() {
+            warn!("Unexpected negative value for {}: {}", path, number);
+
+            None
+        } else {
+            value.cloned()
+        }
     }
 
     fn percentage_from(value: f64, total: f64) -> i32 {
@@ -470,9 +508,14 @@ mod tests {
     use std::assert_eq;
     use std::fs::File;
 
-    fn json() -> serde_json::Value {
+    fn digitalocean_fixture() -> serde_json::Value {
         let file =
             File::open("test/fixtures/digitalocean.json").expect("Could not open example file");
+        serde_json::from_reader(file).expect("Could not parse example file")
+    }
+
+    fn negative_fixture() -> serde_json::Value {
+        let file = File::open("test/fixtures/negative.json").expect("Could not open example file");
         serde_json::from_reader(file).expect("Could not parse example file")
     }
 
@@ -483,7 +526,8 @@ mod tests {
 
     #[test]
     fn extract_node_metrics_with_results() {
-        let metric = KubernetesMetrics::from_node_json(json()["node"].clone()).unwrap();
+        let metric =
+            KubernetesMetrics::from_node_json(digitalocean_fixture()["node"].clone()).unwrap();
 
         assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
 
@@ -631,14 +675,58 @@ mod tests {
     }
 
     #[test]
+    fn extract_node_metrics_with_negative_results() {
+        let metric = KubernetesMetrics::from_node_json(negative_fixture()["node"].clone()).unwrap();
+
+        assert_eq!("pool-k1f1it7zb-ekz6u", metric.node_name);
+
+        assert_eq!(0, metric.cpu_usage_nano_cores);
+        assert_eq!(0, metric.cpu_usage_core_nano_seconds);
+
+        assert_eq!(0, metric.memory_available_bytes);
+        assert_eq!(0, metric.memory_usage_bytes);
+        assert_eq!(0, metric.memory_working_set_bytes);
+        assert_eq!(0, metric.memory_rss_bytes);
+        assert_eq!(0, metric.memory_page_faults);
+        assert_eq!(0, metric.memory_major_page_faults);
+
+        assert_eq!(0, metric.memory_usage);
+
+        assert_eq!(0, metric.network_rx_bytes);
+        assert_eq!(0, metric.network_rx_errors);
+        assert_eq!(0, metric.network_tx_bytes);
+        assert_eq!(0, metric.network_tx_errors);
+
+        assert_eq!(0, metric.fs_available_bytes);
+        assert_eq!(0, metric.fs_capacity_bytes);
+        assert_eq!(0, metric.fs_used_bytes);
+        assert_eq!(0, metric.fs_inodes_free);
+        assert_eq!(0, metric.fs_inodes);
+        assert_eq!(0, metric.fs_inodes_used);
+
+        assert_eq!(0, metric.disk_usage);
+
+        assert_eq!(0, metric.rlimit_maxpid);
+        assert_eq!(0, metric.rlimit_curproc);
+
+        assert_eq!(0, metric.swap_usage_bytes);
+        assert_eq!(0, metric.swap_available_bytes);
+
+        assert_eq!(0, metric.swap_usage);
+    }
+
+    #[test]
     fn extract_pod_metrics_with_empty_results() {
         assert_eq!(None, KubernetesMetrics::from_pod_json(None, json!([])));
     }
 
     #[test]
     fn extract_pod_metrics_with_results() {
-        let metric =
-            KubernetesMetrics::from_pod_json(Some("node"), json()["pods"][0].clone()).unwrap();
+        let metric = KubernetesMetrics::from_pod_json(
+            Some("node"),
+            digitalocean_fixture()["pods"][0].clone(),
+        )
+        .unwrap();
 
         assert_eq!("node", metric.node_name);
         assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
@@ -715,7 +803,7 @@ mod tests {
 
     #[test]
     fn delta_subtracts_network_data() {
-        let metric = KubernetesMetrics::from_node_json(json()["node"].clone())
+        let metric = KubernetesMetrics::from_node_json(digitalocean_fixture()["node"].clone())
             .clone()
             .unwrap();
 
@@ -807,5 +895,37 @@ mod tests {
         let new = node.delta_from(previous).unwrap();
 
         assert_eq!(4, new.network_rx_bytes);
+    }
+
+    #[test]
+    fn extract_pod_metrics_with_negative_results() {
+        let metric =
+            KubernetesMetrics::from_pod_json(Some("node"), negative_fixture()["pods"][0].clone())
+                .unwrap();
+
+        assert_eq!(0, metric.cpu_usage_nano_cores);
+        assert_eq!(0, metric.cpu_usage_core_nano_seconds);
+
+        assert_eq!(0, metric.memory_usage_bytes);
+        assert_eq!(0, metric.memory_working_set_bytes);
+        assert_eq!(0, metric.memory_rss_bytes);
+        assert_eq!(0, metric.memory_page_faults);
+        assert_eq!(0, metric.memory_major_page_faults);
+
+        assert_eq!(0, metric.network_rx_bytes);
+        assert_eq!(0, metric.network_rx_errors);
+        assert_eq!(0, metric.network_tx_bytes);
+        assert_eq!(0, metric.network_tx_errors);
+
+        assert_eq!(0, metric.ephemeral_storage_available_bytes);
+        assert_eq!(0, metric.ephemeral_storage_capacity_bytes);
+        assert_eq!(0, metric.ephemeral_storage_used_bytes);
+        assert_eq!(0, metric.ephemeral_storage_inodes_free);
+        assert_eq!(0, metric.ephemeral_storage_inodes);
+        assert_eq!(0, metric.ephemeral_storage_inodes_used);
+
+        assert_eq!(0, metric.process_count);
+
+        assert_eq!(0, metric.swap_usage_bytes);
     }
 }
