@@ -471,10 +471,10 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 ) {
-                    if let Some(uid) = pod["podRef"]["uid"].as_str() {
+                    if let Some(node_name) = pod["podRef"]["name"].as_str() {
                         if let Some(pod_data) = pods_list.iter().find ( |pod| {
-                            match &pod.metadata.uid {
-                                Some(current_uid) => current_uid == &uid,
+                            match &pod.metadata.name {
+                                Some(name) => name == node_name,
                                 _ => false
                             }
                         }) {
