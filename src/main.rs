@@ -366,6 +366,19 @@ impl KubernetesMetrics {
             .map(|previous| self.delta(previous.clone()))
     }
 
+    pub fn extract_phase(&mut self, pods: &kube::api::ObjectList<Pod>) {
+        if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
+            Some(name) => name == &self.pod_name,
+            _ => false,
+        }) {
+            if let Some(status) = &pod_data.status {
+                if let Some(phase) = &status.phase {
+                    self.set_phase(phase.to_string());
+                };
+            }
+        };
+    }
+
     fn extract_i64(data: &serde_json::Value, path: &str) -> Option<i64> {
         Self::extract(data, path)?.as_i64()
     }
@@ -471,21 +484,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 ) {
-                    if let Some(node_name) = pod["podRef"]["name"].as_str() {
-                        if let Some(pod_data) = pods_list.iter().find ( |pod| {
-                            match &pod.metadata.name {
-                                Some(name) => name == node_name,
-                                _ => false
-                            }
-                        }) {
-
-                            if let Some(status) = &pod_data.status {
-                                if let Some(phase) = &status.phase {
-                                    pod_metric.set_phase(phase.to_string());
-                                };
-                            }
-                        };
-                    };
+                    pod_metric.extract_phase(&pods_list);
 
                     if let Some(metric) = pod_metric.delta_from(previous.clone()) {
                         payload.push(metric);
