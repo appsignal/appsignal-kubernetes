@@ -1,7 +1,7 @@
 extern crate time;
 
 use http::Request;
-use k8s_openapi::api::core::v1::Node;
+use k8s_openapi::api::core::v1::{Node, Pod};
 use kube::{api::ListParams, Api, ResourceExt};
 use log::{info, trace, warn};
 use protobuf::Message;
@@ -433,12 +433,17 @@ async fn main() -> Result<(), Error> {
 
 async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
     let kube_client = kube::Client::try_default().await?;
-    let api: Api<Node> = Api::all(kube_client.clone());
-    let nodes = api.list(&ListParams::default()).await?;
+
+    let nodes: Api<Node> = Api::all(kube_client.clone());
+    let nodes_list = nodes.list(&ListParams::default()).await?;
+
+    let pods: Api<Pod> = Api::all(kube_client.clone());
+    let pods_list = pods.list(&ListParams::default()).await?;
+
     let mut metrics = Vec::new();
     let mut payload = Vec::new();
 
-    for node in nodes {
+    for node in nodes_list {
         let name = node.name_any();
         let url = format!("/api/v1/nodes/{}/proxy/stats/summary", name);
 
@@ -462,10 +467,26 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                if let Some(pod_metric) = KubernetesMetrics::from_pod_json(
+                if let Some(mut pod_metric) = KubernetesMetrics::from_pod_json(
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 ) {
+                    if let Some(uid) = pod["podRef"]["uid"].as_str() {
+                        if let Some(pod_data) = pods_list.iter().find ( |pod| {
+                            match &pod.metadata.uid {
+                                Some(current_uid) => current_uid == &uid,
+                                _ => false
+                            }
+                        }) {
+
+                            if let Some(status) = &pod_data.status {
+                                if let Some(phase) = &status.phase {
+                                    pod_metric.set_phase(phase.to_string());
+                                };
+                            }
+                        };
+                    };
+
                     if let Some(metric) = pod_metric.delta_from(previous.clone()) {
                         payload.push(metric);
                     }
