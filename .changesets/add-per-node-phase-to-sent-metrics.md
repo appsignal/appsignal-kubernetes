@@ -3,4 +3,4 @@ bump: minor
 type: add
 ---
 
-Add per-node phase to sent metrics
+Add per-pod phase to sent metrics
