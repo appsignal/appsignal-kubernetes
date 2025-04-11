@@ -1,7 +1,7 @@
 extern crate time;
 
 use http::Request;
-use k8s_openapi::api::core::v1::Node;
+use k8s_openapi::api::core::v1::{Node, Pod};
 use kube::{api::ListParams, Api, ResourceExt};
 use log::{info, trace, warn};
 use protobuf::Message;
@@ -366,6 +366,19 @@ impl KubernetesMetrics {
             .map(|previous| self.delta(previous.clone()))
     }
 
+    pub fn extract_phase(&mut self, pods: &kube::api::ObjectList<Pod>) {
+        if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
+            Some(name) => name == &self.pod_name,
+            _ => false,
+        }) {
+            if let Some(status) = &pod_data.status {
+                if let Some(phase) = &status.phase {
+                    self.set_phase(phase.to_string());
+                };
+            }
+        };
+    }
+
     fn extract_i64(data: &serde_json::Value, path: &str) -> Option<i64> {
         Self::extract(data, path)?.as_i64()
     }
@@ -433,12 +446,17 @@ async fn main() -> Result<(), Error> {
 
 async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
     let kube_client = kube::Client::try_default().await?;
-    let api: Api<Node> = Api::all(kube_client.clone());
-    let nodes = api.list(&ListParams::default()).await?;
+
+    let nodes: Api<Node> = Api::all(kube_client.clone());
+    let nodes_list = nodes.list(&ListParams::default()).await?;
+
+    let pods: Api<Pod> = Api::all(kube_client.clone());
+    let pods_list = pods.list(&ListParams::default()).await?;
+
     let mut metrics = Vec::new();
     let mut payload = Vec::new();
 
-    for node in nodes {
+    for node in nodes_list {
         let name = node.name_any();
         let url = format!("/api/v1/nodes/{}/proxy/stats/summary", name);
 
@@ -462,10 +480,12 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
 
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                if let Some(pod_metric) = KubernetesMetrics::from_pod_json(
+                if let Some(mut pod_metric) = KubernetesMetrics::from_pod_json(
                     kube_response["node"]["nodeName"].as_str(),
                     pod.clone(),
                 ) {
+                    pod_metric.extract_phase(&pods_list);
+
                     if let Some(metric) = pod_metric.delta_from(previous.clone()) {
                         payload.push(metric);
                     }
