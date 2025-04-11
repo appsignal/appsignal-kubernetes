@@ -113,17 +113,25 @@ dependencies = [
 name = "appsignal-kubernetes"
 version = "1.0.0"
 dependencies = [
+ "appsignal-transmitter",
  "env_logger",
  "http",
  "k8s-openapi",
  "kube",
  "log",
  "protobuf",
- "reqwest",
  "serde",
  "serde_json",
  "time",
  "tokio",
+]
+
+[[package]]
+name = "appsignal-transmitter"
+version = "0.1.0"
+source = "git+https://github.com/appsignal/appsignal-transmitter.git#2a53bbd14ac86eb22815112a957b57f64561201e"
+dependencies = [
+ "reqwest",
 ]
 
 [[package]]
