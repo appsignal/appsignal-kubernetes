@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.1.0
+
+_Published on 2025-04-14._
+
+### Added
+
+- Add per-pod phase to sent metrics (minor [5ed49ca](https://github.com/appsignal/appsignal-kubernetes/commit/5ed49cac0c4394d32aad3fe3f2d919fa57244cae), [d729c11](https://github.com/appsignal/appsignal-kubernetes/commit/d729c1145a6a0a02228bdb0a470951730a0749ca))
+
 ## 1.0.1
 
 _Published on 2025-03-27._
