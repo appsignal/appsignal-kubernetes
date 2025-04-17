@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.1.1
+
+_Published on 2025-04-17._
+
+### Added
+
+- Version bump without internal changes (patch [d1c159c](https://github.com/appsignal/appsignal-kubernetes/commit/d1c159c98529909657a6f366eea8d86d5aa2e7de))
+
 ## 1.1.0
 
 _Published on 2025-04-14._
