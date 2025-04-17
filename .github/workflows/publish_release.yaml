@@ -58,8 +58,8 @@ jobs:
 
       - name: "Create a release on the repository"
         run: |
-          gh release create ${{steps.version.outputs.RELEASE_VERSION}} \
-            --title "Release ${{steps.version.outputs.RELEASE_VERSION}}" \
+          gh release create v${{steps.version.outputs.RELEASE_VERSION}} \
+            --title "Release v${{steps.version.outputs.RELEASE_VERSION}}" \
             --verify-tag \
             --notes-from-tag
         env:
