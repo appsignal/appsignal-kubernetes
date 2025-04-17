@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ssh-key: "${{secrets.PUBLISH_DEPLOY_KEY}}"
+          fetch-depth: 0 # Check out all commits because we want to check out the gh-pages branch too
 
       - name: "Checkout Mono"
         uses: actions/checkout@v4
