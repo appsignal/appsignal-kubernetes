@@ -78,6 +78,14 @@ jobs:
         env:
           GH_TOKEN: ${{github.token}}
 
+      # The Helm chart releaser needs the Git remote to be a HTTPS URL.
+      # We check out the repository with SSH using a deploy key at the start of the workflow,
+      # because any other workflows that depend on `push` events to trigger them
+      # need to be pushed with a deploy key.
+      #
+      # Update the remote here so it works with the Helm releaser.
+      - name: "Update Git remote for Helm chart releaser"
+        run: "git remote set-url origin https://github.com/appsignal/appsignal-kubernetes"
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         env:
