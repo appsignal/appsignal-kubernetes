@@ -76,3 +76,8 @@ jobs:
 
       - name: "Push release to repository"
         run: git push origin ${{github.ref_name}} "v${{steps.version.outputs.RELEASE_VERSION}}"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        env:
+          CR_TOKEN: "${{github.token}}"
