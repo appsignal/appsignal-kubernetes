@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.1.2
+
+_Published on 2025-05-08._
+
+### Fixed
+
+- Fix permissions for accessing pod metrics. (patch [310c32a](https://github.com/appsignal/appsignal-kubernetes/commit/310c32a5575386c8c62852cad809f2a4c6f4018a))
+
 ## 1.1.1
 
 _Published on 2025-04-17._
