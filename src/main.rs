@@ -379,6 +379,36 @@ impl KubernetesMetrics {
         };
     }
 
+    pub fn extract_pod_labels(&mut self, pods: &kube::api::ObjectList<Pod>) {
+        if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
+            Some(name) => name == &self.pod_name,
+            _ => false,
+        }) {
+            if let Some(labels) = &pod_data.metadata.labels {
+                let mut labels_map = std::collections::HashMap::new();
+                for (key, value) in labels {
+                    labels_map.insert(key.clone(), value.clone());
+                }
+                self.set_labels(labels_map);
+            }
+        };
+    }
+
+    pub fn extract_node_labels(&mut self, nodes: &kube::api::ObjectList<Node>) {
+        if let Some(node_data) = nodes.iter().find(|node| match &node.metadata.name {
+            Some(name) => name == &self.node_name,
+            _ => false,
+        }) {
+            if let Some(labels) = &node_data.metadata.labels {
+                let mut labels_map = std::collections::HashMap::new();
+                for (key, value) in labels {
+                    labels_map.insert(key.clone(), value.clone());
+                }
+                self.set_labels(labels_map);
+            }
+        };
+    }
+
     fn extract_i64(data: &serde_json::Value, path: &str) -> Option<i64> {
         Self::extract(data, path)?.as_i64()
     }
@@ -456,7 +486,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
     let mut metrics = Vec::new();
     let mut payload = Vec::new();
 
-    for node in nodes_list {
+    for node in &nodes_list {
         let name = node.name_any();
         let url = format!("/api/v1/nodes/{}/proxy/stats/summary", name);
 
@@ -467,8 +497,11 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
 
         trace!("JSON: {:?}", kube_response);
 
-        if let Some(node_metric) = KubernetesMetrics::from_node_json(kube_response["node"].clone())
+        if let Some(mut node_metric) =
+            KubernetesMetrics::from_node_json(kube_response["node"].clone())
         {
+            node_metric.extract_node_labels(&nodes_list);
+
             if let Some(metric) = node_metric.delta_from(previous.clone()) {
                 payload.push(metric);
             }
@@ -485,6 +518,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                     pod.clone(),
                 ) {
                     pod_metric.extract_phase(&pods_list);
+                    pod_metric.extract_pod_labels(&pods_list);
 
                     if let Some(metric) = pod_metric.delta_from(previous.clone()) {
                         payload.push(metric);
