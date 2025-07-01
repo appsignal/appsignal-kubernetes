@@ -26,7 +26,7 @@ jobs:
         with:
           username: ${{ secrets.CI_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CI_DOCKERHUB_TOKEN }}
-      - run: rustup component add clippy
+      - run: rustup component add clippy rustfmt
       - run: cargo clippy --verbose --tests --all-targets --all-features -- -D warnings
       - run: cargo fmt --check --verbose
       - run: cargo test --verbose
