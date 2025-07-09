@@ -379,6 +379,37 @@ impl KubernetesMetrics {
         };
     }
 
+    pub fn extract_pod_restart_count_and_uptime(&mut self, pods: &kube::api::ObjectList<Pod>) {
+        if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
+            Some(name) => name == &self.pod_name,
+            _ => false,
+        }) {
+            if let Some(status) = &pod_data.status {
+                // Calculate restart count from container statuses
+                let mut total_restart_count = 0;
+                if let Some(container_statuses) = &status.container_statuses {
+                    for container_status in container_statuses {
+                        total_restart_count += container_status.restart_count;
+                    }
+                }
+                self.set_pod_restart_count(total_restart_count);
+
+                // Calculate uptime from pod start time
+                if let Some(start_time) = &status.start_time {
+                    let now = chrono::Utc::now();
+                    if let Ok(start_time_parsed) =
+                        chrono::DateTime::parse_from_rfc3339(&start_time.0.to_rfc3339())
+                    {
+                        let uptime_duration = now
+                            .signed_duration_since(start_time_parsed.with_timezone(&chrono::Utc));
+                        let uptime_seconds = uptime_duration.num_seconds().max(0);
+                        self.set_pod_uptime_seconds(uptime_seconds);
+                    }
+                }
+            }
+        };
+    }
+
     pub fn extract_pod_labels(&mut self, pods: &kube::api::ObjectList<Pod>) {
         if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
             Some(name) => name == &self.pod_name,
@@ -519,6 +550,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                 ) {
                     pod_metric.extract_phase(&pods_list);
                     pod_metric.extract_pod_labels(&pods_list);
+                    pod_metric.extract_pod_restart_count_and_uptime(&pods_list);
 
                     if let Some(metric) = pod_metric.delta_from(previous.clone()) {
                         payload.push(metric);
