@@ -1,17 +1,25 @@
+mod ownership;
+
 extern crate time;
 
 use appsignal_transmitter::reqwest::{Client, Url};
 use http::Request;
 use k8s_openapi::api::core::v1::{Node, Pod};
-use kube::{api::ListParams, Api, ResourceExt};
+use kube::api::ListParams;
+use kube::{Api, ResourceExt};
 use log::{info, trace, warn};
 use protobuf::Message;
 use std::env;
 use std::time::Duration;
 
-include!("../protocol/mod.rs");
+mod protocol {
+    #![allow(renamed_and_removed_lints)]
+    include!("../protocol/mod.rs");
+}
 
-use kubernetes::KubernetesMetrics;
+use protocol::kubernetes::{KubernetesMetrics, OwnerReference};
+
+use crate::ownership::{OwnershipResolver, ResourceIdentifier};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
@@ -440,6 +448,32 @@ impl KubernetesMetrics {
         };
     }
 
+    pub async fn extract_owner_references(
+        &mut self,
+        resolver: &mut OwnershipResolver,
+        pods: &kube::api::ObjectList<Pod>,
+    ) -> Result<(), Error> {
+        if let Some(pod) = pods.iter().find(|pod| match &pod.metadata.name {
+            Some(name) => name == &self.pod_name,
+            _ => false,
+        }) {
+            let resource = ResourceIdentifier::from_pod(pod);
+            let owner_references = resolver.resolve_top_level_owners(&resource).await?;
+            for owner_reference in owner_references {
+                let mut protocol_owner_reference = OwnerReference::new();
+                protocol_owner_reference.set_name(owner_reference.name);
+                protocol_owner_reference.set_kind(owner_reference.gvk.kind);
+                if let Some(namespace) = owner_reference.namespace {
+                    protocol_owner_reference.set_namespace(namespace);
+                }
+
+                self.mut_owner_references().push(protocol_owner_reference);
+            }
+        };
+
+        Ok(())
+    }
+
     fn extract_i64(data: &serde_json::Value, path: &str) -> Option<i64> {
         Self::extract(data, path)?.as_i64()
     }
@@ -491,6 +525,8 @@ async fn main() -> Result<(), Error> {
         Config::from_env()
     );
 
+    let client = kube::Client::try_default().await?;
+    let mut resolver = OwnershipResolver::new(client.clone());
     let duration = Duration::new(60, 0);
     let mut interval = tokio::time::interval(duration);
     let mut previous = Vec::new();
@@ -498,20 +534,29 @@ async fn main() -> Result<(), Error> {
     loop {
         interval.tick().await;
 
-        match run(previous).await {
+        match run(&client, &mut resolver, previous).await {
             Ok(results) => previous = results,
-            Err(err) => panic!("Failed to extract metrics: {}", err),
+            Err(err) => {
+                warn!("Failed to extract and report metrics: {}", err);
+                previous = Vec::new();
+            }
         }
+
+        resolver.reset();
     }
 }
 
-async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>, Error> {
-    let kube_client = kube::Client::try_default().await?;
+async fn run(
+    client: &kube::Client,
+    resolver: &mut OwnershipResolver,
+    previous: Vec<KubernetesMetrics>,
+) -> Result<Vec<KubernetesMetrics>, Error> {
+    trace!("Beginning Kubernetes metrics extraction");
 
-    let nodes: Api<Node> = Api::all(kube_client.clone());
+    let nodes: Api<Node> = Api::all(client.clone());
     let nodes_list = nodes.list(&ListParams::default()).await?;
 
-    let pods: Api<Pod> = Api::all(kube_client.clone());
+    let pods: Api<Pod> = Api::all(client.clone());
     let pods_list = pods.list(&ListParams::default()).await?;
 
     let mut metrics = Vec::new();
@@ -522,7 +567,7 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
         let url = format!("/api/v1/nodes/{}/proxy/stats/summary", name);
 
         let kube_request = Request::get(url).body(Default::default())?;
-        let kube_response = kube_client
+        let kube_response = client
             .request::<serde_json::Value>(kube_request.clone())
             .await?;
 
@@ -551,6 +596,16 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
                     pod_metric.extract_phase(&pods_list);
                     pod_metric.extract_pod_labels(&pods_list);
                     pod_metric.extract_pod_restart_count_and_uptime(&pods_list);
+
+                    if let Err(err) = pod_metric
+                        .extract_owner_references(resolver, &pods_list)
+                        .await
+                    {
+                        warn!(
+                            "Failed to extract owner references for pod {}: {}",
+                            pod_metric.pod_name, err
+                        );
+                    }
 
                     if let Some(metric) = pod_metric.delta_from(previous.clone()) {
                         payload.push(metric);
@@ -581,12 +636,16 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
         };
     }
 
+    trace!("Extracted {} metrics", metrics.len());
+
     let config = Config::from_env();
     let base = Url::parse(&config.endpoint).expect("Could not parse endpoint");
     let path = format!("metrics/kubernetes?api_key={}", config.api_key);
     let url = base.join(&path).expect("Could not build request URL");
 
     let reqwest_client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+
+    info!("Sending {} metrics to Appsignal", payload.len());
 
     for metric in &payload {
         let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
@@ -596,8 +655,10 @@ async fn run(previous: Vec<KubernetesMetrics>) -> Result<Vec<KubernetesMetrics>,
             .send()
             .await?;
 
-        info!("Metric sent: {:?}", appsignal_response);
+        trace!("Metric sent: {:?}", appsignal_response);
     }
+
+    trace!("Done sending metrics");
 
     Ok(metrics)
 }
