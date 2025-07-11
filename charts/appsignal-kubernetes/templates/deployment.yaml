@@ -23,6 +23,8 @@ spec:
             secretKeyRef:
               name: appsignal
               key: api-key
+        - name: RUST_LOG
+          value: info
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -34,10 +36,8 @@ kind: ClusterRole
 metadata:
   name: appsignal-kubernetes-role
 rules:
-  - apiGroups: [""]
-    resources:
-      - nodes
-      - "nodes/proxy"
+  - apiGroups: ["*"]
+    resources: ["*"]
     verbs:
       - get
       - list
