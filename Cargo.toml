@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread", "time"] }
 serde_json = "1.0"
-kube = { version = "0.89", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.21", features = ["latest"] }
+kube = { version = "1.1.0", features = ["runtime", "derive"] }
+k8s-openapi = { version = "0.25", features = ["earliest"] }
 http = "1.0"
 serde = "*"
 protobuf = "=2.24.1"
