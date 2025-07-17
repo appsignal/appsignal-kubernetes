@@ -40,6 +40,11 @@ jobs:
           echo "$(git config --get user.email) namespaces=\"git\" $(cat $PUBLISH_GIT_SIGN_KEY_PATH.pub)" >> ~/.ssh/allowed_signers
           git config --global user.signingkey "$PUBLISH_GIT_SIGN_KEY_PATH"
 
+      - name: "Install Helm"
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
       - name: "Create version"
         id: version
         run: |

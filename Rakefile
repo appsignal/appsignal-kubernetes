@@ -133,10 +133,28 @@ task :protocol do
   `protoc -I ../appsignal-protocol --rust_out=protocol ../appsignal-protocol/kubernetes.proto`
 end
 
-desc "Update the Helm template files"
-task :update_helm_templates do
-  `mkdir -p charts/appsignal-kubernetes/templates`
-  `cp deployment.yaml charts/appsignal-kubernetes/templates`
+desc "Generate deployment.yaml from Helm chart"
+task :generate_deployment do
+  require 'tempfile'
+  
+  # Create a temporary values file with only the overrides needed for standalone deployment
+  values_override = <<~VALUES
+    image:
+      tag: "#{current_version}"
+  VALUES
+  
+  # Write temporary override values file
+  Tempfile.create(['values-override', '.yaml']) do |override_file|
+    override_file.write(values_override)
+    override_file.flush
+    
+    # Generate deployment.yaml using helm template with existing values.yaml plus overrides
+    output = `helm template appsignal-kubernetes charts/appsignal-kubernetes --values charts/appsignal-kubernetes/values.yaml --values #{override_file.path} --namespace appsignal`
+    
+    # Write the output to deployment.yaml
+    File.write('deployment.yaml', output)
+    puts "Generated deployment.yaml from Helm chart"
+  end
 end
 
 def current_version
