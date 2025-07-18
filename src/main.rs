@@ -17,7 +17,7 @@ mod protocol {
     include!("../protocol/mod.rs");
 }
 
-use protocol::kubernetes::{KubernetesMetrics, OwnerReference};
+use protocol::kubernetes::{KubernetesMetrics, OwnerReference, ContainerStatus};
 
 use crate::ownership::{OwnershipResolver, ResourceIdentifier};
 
@@ -387,6 +387,50 @@ impl KubernetesMetrics {
         };
     }
 
+    pub fn extract_container_statuses(&mut self, pods: &kube::api::ObjectList<Pod>) {
+        if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
+            Some(name) => name == &self.pod_name,
+            _ => false,
+        }) {
+            if let Some(status) = &pod_data.status {
+                if let Some(container_statuses) = &status.container_statuses {
+                    let mut proto_container_statuses = protobuf::RepeatedField::new();
+                    
+                    for container_status in container_statuses {
+                        let mut proto_container_status = ContainerStatus::new();
+                        
+                        // Set container name
+                        proto_container_status.set_name(container_status.name.clone());
+                        
+                        // Extract status, reason, and exit code based on container state
+                        if let Some(ref state) = container_status.state {
+                            if let Some(ref _running) = state.running {
+                                proto_container_status.set_status("running".to_string());
+                                // Running state doesn't have reason or exit_code
+                            } else if let Some(ref waiting) = state.waiting {
+                                proto_container_status.set_status("waiting".to_string());
+                                if let Some(ref reason) = waiting.reason {
+                                    proto_container_status.set_reason(reason.clone());
+                                }
+                                // Waiting state doesn't have exit_code
+                            } else if let Some(ref terminated) = state.terminated {
+                                proto_container_status.set_status("terminated".to_string());
+                                if let Some(ref reason) = terminated.reason {
+                                    proto_container_status.set_reason(reason.clone());
+                                }
+                                proto_container_status.set_exit_code(terminated.exit_code);
+                            }
+                        }
+                        
+                        proto_container_statuses.push(proto_container_status);
+                    }
+                    
+                    self.set_container_statuses(proto_container_statuses);
+                }
+            }
+        };
+    }
+
     pub fn extract_pod_restart_count_and_uptime(&mut self, pods: &kube::api::ObjectList<Pod>) {
         if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
             Some(name) => name == &self.pod_name,
@@ -594,6 +638,7 @@ async fn run(
                     pod.clone(),
                 ) {
                     pod_metric.extract_phase(&pods_list);
+                    pod_metric.extract_container_statuses(&pods_list);
                     pod_metric.extract_pod_labels(&pods_list);
                     pod_metric.extract_pod_restart_count_and_uptime(&pods_list);
 
