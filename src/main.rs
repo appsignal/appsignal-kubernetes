@@ -17,7 +17,9 @@ mod protocol {
     include!("../protocol/mod.rs");
 }
 
-use protocol::kubernetes::{ContainerStatus, KubernetesMetrics, OwnerReference};
+use protocol::kubernetes::{
+    Container, ContainerStatus, KubernetesMetrics, OwnerReference, PodPhase,
+};
 
 use crate::ownership::{OwnershipResolver, ResourceIdentifier};
 
@@ -187,7 +189,14 @@ impl KubernetesMetrics {
         // Extract phase
         if let Some(status) = &pod.status {
             if let Some(phase) = &status.phase {
-                metric.set_phase(phase.to_string());
+                let pod_phase = match phase.as_str() {
+                    "Pending" => PodPhase::POD_PHASE_PENDING,
+                    "Running" => PodPhase::POD_PHASE_RUNNING,
+                    "Succeeded" => PodPhase::POD_PHASE_SUCCEEDED,
+                    "Failed" => PodPhase::POD_PHASE_FAILED,
+                    _ => PodPhase::POD_PHASE_UNKNOWN,
+                };
+                metric.set_pod_phase(pod_phase);
             }
         }
 
@@ -368,58 +377,51 @@ impl KubernetesMetrics {
             .map(|previous| self.delta(previous.clone()))
     }
 
-    pub fn extract_phase(&mut self, pods: &kube::api::ObjectList<Pod>) {
-        if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
-            Some(name) => name == &self.pod_name,
-            _ => false,
-        }) {
-            if let Some(status) = &pod_data.status {
-                if let Some(phase) = &status.phase {
-                    self.set_phase(phase.to_string());
-                };
-            }
-        };
-    }
-
-    pub fn extract_container_statuses(&mut self, pods: &kube::api::ObjectList<Pod>) {
+    pub fn extract_containers(&mut self, pods: &kube::api::ObjectList<Pod>) {
         if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
             Some(name) => name == &self.pod_name,
             _ => false,
         }) {
             if let Some(status) = &pod_data.status {
                 if let Some(container_statuses) = &status.container_statuses {
-                    let mut proto_container_statuses = protobuf::RepeatedField::new();
+                    let mut proto_containers = protobuf::RepeatedField::new();
 
                     for container_status in container_statuses {
-                        let mut proto_container_status = ContainerStatus::new();
+                        let mut proto_container = Container::new();
 
                         // Set container name
-                        proto_container_status.set_name(container_status.name.clone());
+                        proto_container.set_name(container_status.name.clone());
 
-                        // Extract status, reason, and exit code based on container state
+                        // Extract container status, reason, and exit code based on container state
                         if let Some(ref state) = container_status.state {
                             if let Some(ref _running) = state.running {
-                                proto_container_status.set_status("running".to_string());
+                                proto_container
+                                    .set_status(ContainerStatus::CONTAINER_STATUS_RUNNING);
                                 // Running state doesn't have reason or exit_code
                             } else if let Some(ref waiting) = state.waiting {
-                                proto_container_status.set_status("waiting".to_string());
+                                proto_container
+                                    .set_status(ContainerStatus::CONTAINER_STATUS_WAITING);
                                 if let Some(ref reason) = waiting.reason {
-                                    proto_container_status.set_reason(reason.clone());
+                                    proto_container.set_reason(reason.clone());
                                 }
                                 // Waiting state doesn't have exit_code
                             } else if let Some(ref terminated) = state.terminated {
-                                proto_container_status.set_status("terminated".to_string());
+                                proto_container
+                                    .set_status(ContainerStatus::CONTAINER_STATUS_TERMINATED);
                                 if let Some(ref reason) = terminated.reason {
-                                    proto_container_status.set_reason(reason.clone());
+                                    proto_container.set_reason(reason.clone());
                                 }
-                                proto_container_status.set_exit_code(terminated.exit_code);
+                                proto_container.set_exit_code(terminated.exit_code);
                             }
+                        } else {
+                            // If no state is present, default to unknown
+                            proto_container.set_status(ContainerStatus::CONTAINER_STATUS_UNKNOWN);
                         }
 
-                        proto_container_statuses.push(proto_container_status);
+                        proto_containers.push(proto_container);
                     }
 
-                    self.set_container_statuses(proto_container_statuses);
+                    self.set_containers(proto_containers);
                 }
             }
         };
@@ -667,7 +669,7 @@ async fn run(
     for pod in &pods_list {
         if let Some(mut pod_metric) = KubernetesMetrics::from_pod_api(pod) {
             // Extract additional metadata from Kubernetes API
-            pod_metric.extract_container_statuses(&pods_list);
+            pod_metric.extract_containers(&pods_list);
             pod_metric.extract_pod_labels(&pods_list);
             pod_metric.extract_pod_restart_count_and_uptime(&pods_list);
 
@@ -1193,7 +1195,10 @@ mod tests {
         assert_eq!("default", metric.pod_namespace);
         assert_eq!("test-uid-123", metric.pod_uuid);
         assert_eq!("test-node", metric.node_name);
-        assert_eq!("Running", metric.phase);
+        assert_eq!(
+            crate::protocol::kubernetes::PodPhase::POD_PHASE_RUNNING,
+            metric.pod_phase
+        );
         assert!(metric.is_pod());
         assert!(!metric.is_node());
         assert!(!metric.is_volume());
