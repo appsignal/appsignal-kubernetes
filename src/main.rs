@@ -2,7 +2,7 @@ mod ownership;
 
 extern crate time;
 
-use appsignal_transmitter::reqwest::{Client, Url};
+use appsignal_transmitter::reqwest::{Client, Response, Url};
 use http::Request;
 use k8s_openapi::api::core::v1::{Node, Pod};
 use kube::api::ListParams;
@@ -18,10 +18,15 @@ mod protocol {
 }
 
 use protocol::kubernetes::{
-    Container, ContainerStatus, KubernetesMetrics, OwnerReference, PodPhase,
+    Container, ContainerStatus, KubernetesMetrics, KubernetesMetricsBatch, OwnerReference, PodPhase,
 };
 
 use crate::ownership::{OwnershipResolver, ResourceIdentifier};
+
+// The threshold for metrics batch size, in bytes.
+// The body of a request to AppSignal will only exceed this threshold
+// if a single metric somehow exceeds it.
+const BATCH_SIZE_THRESHOLD: u32 = 400_000;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
@@ -591,7 +596,7 @@ async fn run(
     resolver: &mut OwnershipResolver,
     previous: Vec<KubernetesMetrics>,
 ) -> Result<Vec<KubernetesMetrics>, Error> {
-    trace!("Beginning Kubernetes metrics extraction");
+    info!("Extracting metrics from Kubernetes cluster");
 
     let nodes: Api<Node> = Api::all(client.clone());
     let nodes_list = nodes.list(&ListParams::default()).await?;
@@ -698,7 +703,7 @@ async fn run(
         }
     }
 
-    trace!("Extracted {} metrics", metrics.len());
+    info!("Extracted {} metrics", metrics.len());
 
     let config = Config::from_env();
     let base = Url::parse(&config.endpoint).expect("Could not parse endpoint");
@@ -709,20 +714,53 @@ async fn run(
 
     info!("Sending {} metrics to Appsignal", payload.len());
 
-    for metric in &payload {
-        let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
-        let appsignal_response = reqwest_client
-            .post(url.clone())
-            .body(metric_bytes)
-            .send()
-            .await?;
+    let mut batch_message = KubernetesMetricsBatch::new();
+    for metric in payload.into_iter() {
+        batch_message.mut_metrics().push(metric);
+        if batch_message.compute_size() > BATCH_SIZE_THRESHOLD {
+            // Remove the metric that went over the threshold from the batch,
+            // unless it is the only metric in the batch.
+            let metric = if batch_message.mut_metrics().len() > 1 {
+                metrics.pop()
+            } else {
+                None
+            };
 
-        trace!("Metric sent: {:?}", appsignal_response);
+            let batch = std::mem::take(&mut batch_message);
+            send_batch(batch, &url, &reqwest_client).await?;
+
+            // Add the metric that went over the threshold to the next batch.
+            if let Some(metric) = metric {
+                batch_message.mut_metrics().push(metric);
+            }
+        }
     }
 
-    trace!("Done sending metrics");
+    if !batch_message.get_metrics().is_empty() {
+        send_batch(batch_message, &url, &reqwest_client).await?;
+    }
+
+    info!("All metrics sent");
 
     Ok(metrics)
+}
+
+async fn send_batch(
+    batch: KubernetesMetricsBatch,
+    url: &Url,
+    client: &Client,
+) -> Result<Response, Error> {
+    let batch_bytes = batch.write_to_bytes().expect("Could not serialize batch");
+
+    let response = client.post(url.clone()).body(batch_bytes).send().await?;
+
+    info!(
+        "Batch of {} metrics sent: {:?}",
+        batch.get_metrics().len(),
+        response.status()
+    );
+
+    Ok(response)
 }
 
 fn now_timestamp() -> i64 {
