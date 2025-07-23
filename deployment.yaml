@@ -9,7 +9,6 @@ metadata:
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
-    app.kubernetes.io/managed-by: Helm
 ---
 # Source: appsignal-kubernetes/templates/deployment.yaml
 apiVersion: v1
@@ -22,7 +21,6 @@ metadata:
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
-    app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 ---
 # Source: appsignal-kubernetes/templates/deployment.yaml
@@ -35,7 +33,6 @@ metadata:
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
-    app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups: ["*"]
     resources: ["*"]
@@ -53,7 +50,6 @@ metadata:
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
-    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -74,7 +70,6 @@ metadata:
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
-    app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
   selector:
