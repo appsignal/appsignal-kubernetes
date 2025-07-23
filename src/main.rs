@@ -2,7 +2,7 @@ mod ownership;
 
 extern crate time;
 
-use appsignal_transmitter::reqwest::{Client, Url};
+use appsignal_transmitter::reqwest::{Client, Response, Url};
 use http::Request;
 use k8s_openapi::api::core::v1::{Node, Pod};
 use kube::api::ListParams;
@@ -17,9 +17,16 @@ mod protocol {
     include!("../protocol/mod.rs");
 }
 
-use protocol::kubernetes::{KubernetesMetrics, OwnerReference};
+use protocol::kubernetes::{
+    Container, ContainerStatus, KubernetesMetrics, KubernetesMetricsBatch, OwnerReference, PodPhase,
+};
 
 use crate::ownership::{OwnershipResolver, ResourceIdentifier};
+
+// The threshold for metrics batch size, in bytes.
+// The body of a request to AppSignal will only exceed this threshold
+// if a single metric somehow exceeds it.
+const BATCH_SIZE_THRESHOLD: u32 = 400_000;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
@@ -170,127 +177,128 @@ impl KubernetesMetrics {
         }
     }
 
-    pub fn from_pod_json(
-        node_name: Option<&str>,
-        json: serde_json::Value,
-    ) -> Option<KubernetesMetrics> {
-        match (node_name, json["podRef"]["name"].as_str()) {
-            (Some(node_name), Some(pod_name)) => {
-                let mut metric = KubernetesMetrics::new();
+    pub fn from_pod_api(pod: &Pod) -> Option<KubernetesMetrics> {
+        let pod_name = pod.metadata.name.as_ref()?;
+        let pod_namespace = pod.metadata.namespace.as_ref()?;
+        let pod_uuid = pod.metadata.uid.as_ref()?;
+        let node_name = pod.spec.as_ref()?.node_name.as_ref()?;
 
-                metric.set_node_name(node_name.to_string());
-                metric.set_pod_name(pod_name.to_string());
+        let mut metric = KubernetesMetrics::new();
 
-                if let Some(namespace) = json["podRef"]["namespace"].as_str() {
-                    metric.set_pod_namespace(namespace.to_string());
-                }
+        metric.set_node_name(node_name.to_string());
+        metric.set_pod_name(pod_name.to_string());
+        metric.set_pod_namespace(pod_namespace.to_string());
+        metric.set_pod_uuid(pod_uuid.to_string());
+        metric.set_timestamp(now_timestamp());
 
-                if let Some(uid) = json["podRef"]["uid"].as_str() {
-                    metric.set_pod_uuid(uid.to_string());
-                }
-
-                metric.set_timestamp(now_timestamp());
-
-                if let Some(cpu_usage_nano_cores) = Self::extract_i64(&json, "/cpu/usageNanoCores")
-                {
-                    metric.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
-                }
-
-                if let Some(cpu_usage_core_nano_seconds) =
-                    Self::extract_i64(&json, "/cpu/usageCoreNanoSeconds")
-                {
-                    metric.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
-                }
-
-                if let Some(memory_usage_bytes) = Self::extract_i64(&json, "/memory/usageBytes") {
-                    metric.set_memory_usage_bytes(memory_usage_bytes);
-                }
-
-                if let Some(memory_working_set_bytes) =
-                    Self::extract_i64(&json, "/memory/workingSetBytes")
-                {
-                    metric.set_memory_working_set_bytes(memory_working_set_bytes);
-                }
-
-                if let Some(memory_rss_bytes) = Self::extract_i64(&json, "/memory/rssBytes") {
-                    metric.set_memory_rss_bytes(memory_rss_bytes);
-                }
-
-                if let Some(memory_page_faults) = Self::extract_i64(&json, "/memory/pageFaults") {
-                    metric.set_memory_page_faults(memory_page_faults as i32);
-                }
-
-                if let Some(memory_major_page_faults) =
-                    Self::extract_i64(&json, "/memory/majorPageFaults")
-                {
-                    metric.set_memory_major_page_faults(memory_major_page_faults as i32);
-                }
-
-                if let Some(network_rx_bytes) = Self::extract_i64(&json, "/network/rxBytes") {
-                    metric.set_network_rx_bytes(network_rx_bytes);
-                }
-
-                if let Some(network_rx_errors) = Self::extract_i64(&json, "/network/rxErrors") {
-                    metric.set_network_rx_errors(network_rx_errors as i32);
-                }
-
-                if let Some(network_tx_bytes) = Self::extract_i64(&json, "/network/txBytes") {
-                    metric.set_network_tx_bytes(network_tx_bytes);
-                }
-
-                if let Some(network_tx_errors) = Self::extract_i64(&json, "/network/txErrors") {
-                    metric.set_network_tx_errors(network_tx_errors as i32);
-                }
-
-                if let Some(ephemeral_storage_available_bytes) =
-                    Self::extract_i64(&json, "/ephemeral-storage/availableBytes")
-                {
-                    metric.set_ephemeral_storage_available_bytes(ephemeral_storage_available_bytes);
-                }
-
-                if let Some(ephemeral_storage_capacity_bytes) =
-                    Self::extract_i64(&json, "/ephemeral-storage/capacityBytes")
-                {
-                    metric.set_ephemeral_storage_capacity_bytes(ephemeral_storage_capacity_bytes);
-                }
-
-                if let Some(ephemeral_storage_used_bytes) =
-                    Self::extract_i64(&json, "/ephemeral-storage/usedBytes")
-                {
-                    metric.set_ephemeral_storage_used_bytes(ephemeral_storage_used_bytes);
-                }
-
-                if let Some(ephemeral_storage_inodes_free) =
-                    Self::extract_i64(&json, "/ephemeral-storage/inodesFree")
-                {
-                    metric.set_ephemeral_storage_inodes_free(ephemeral_storage_inodes_free);
-                }
-
-                if let Some(ephemeral_storage_inodes) =
-                    Self::extract_i64(&json, "/ephemeral-storage/inodes")
-                {
-                    metric.set_ephemeral_storage_inodes(ephemeral_storage_inodes);
-                }
-
-                if let Some(ephemeral_storage_inodes_used) =
-                    Self::extract_i64(&json, "/ephemeral-storage/inodesUsed")
-                {
-                    metric.set_ephemeral_storage_inodes_used(ephemeral_storage_inodes_used);
-                }
-
-                if let Some(process_count) =
-                    Self::extract_i64(&json, "/process_stats/process_count")
-                {
-                    metric.set_process_count(process_count as i32);
-                }
-
-                if let Some(swap_usage_bytes) = Self::extract_i64(&json, "/swap/swapUsageBytes") {
-                    metric.set_swap_usage_bytes(swap_usage_bytes);
-                }
-
-                Some(metric)
+        // Extract phase
+        if let Some(status) = &pod.status {
+            if let Some(phase) = &status.phase {
+                let pod_phase = match phase.as_str() {
+                    "Pending" => PodPhase::POD_PHASE_PENDING,
+                    "Running" => PodPhase::POD_PHASE_RUNNING,
+                    "Succeeded" => PodPhase::POD_PHASE_SUCCEEDED,
+                    "Failed" => PodPhase::POD_PHASE_FAILED,
+                    _ => PodPhase::POD_PHASE_UNKNOWN,
+                };
+                metric.set_pod_phase(pod_phase);
             }
-            _ => None,
+        }
+
+        Some(metric)
+    }
+
+    pub fn enrich_with_stats(&mut self, json: serde_json::Value) {
+        if let Some(cpu_usage_nano_cores) = Self::extract_i64(&json, "/cpu/usageNanoCores") {
+            self.set_cpu_usage_nano_cores(cpu_usage_nano_cores);
+        }
+
+        if let Some(cpu_usage_core_nano_seconds) =
+            Self::extract_i64(&json, "/cpu/usageCoreNanoSeconds")
+        {
+            self.set_cpu_usage_core_nano_seconds(cpu_usage_core_nano_seconds);
+        }
+
+        if let Some(memory_usage_bytes) = Self::extract_i64(&json, "/memory/usageBytes") {
+            self.set_memory_usage_bytes(memory_usage_bytes);
+        }
+
+        if let Some(memory_working_set_bytes) = Self::extract_i64(&json, "/memory/workingSetBytes")
+        {
+            self.set_memory_working_set_bytes(memory_working_set_bytes);
+        }
+
+        if let Some(memory_rss_bytes) = Self::extract_i64(&json, "/memory/rssBytes") {
+            self.set_memory_rss_bytes(memory_rss_bytes);
+        }
+
+        if let Some(memory_page_faults) = Self::extract_i64(&json, "/memory/pageFaults") {
+            self.set_memory_page_faults(memory_page_faults as i32);
+        }
+
+        if let Some(memory_major_page_faults) = Self::extract_i64(&json, "/memory/majorPageFaults")
+        {
+            self.set_memory_major_page_faults(memory_major_page_faults as i32);
+        }
+
+        if let Some(network_rx_bytes) = Self::extract_i64(&json, "/network/rxBytes") {
+            self.set_network_rx_bytes(network_rx_bytes);
+        }
+
+        if let Some(network_rx_errors) = Self::extract_i64(&json, "/network/rxErrors") {
+            self.set_network_rx_errors(network_rx_errors as i32);
+        }
+
+        if let Some(network_tx_bytes) = Self::extract_i64(&json, "/network/txBytes") {
+            self.set_network_tx_bytes(network_tx_bytes);
+        }
+
+        if let Some(network_tx_errors) = Self::extract_i64(&json, "/network/txErrors") {
+            self.set_network_tx_errors(network_tx_errors as i32);
+        }
+
+        if let Some(ephemeral_storage_available_bytes) =
+            Self::extract_i64(&json, "/ephemeral-storage/availableBytes")
+        {
+            self.set_ephemeral_storage_available_bytes(ephemeral_storage_available_bytes);
+        }
+
+        if let Some(ephemeral_storage_capacity_bytes) =
+            Self::extract_i64(&json, "/ephemeral-storage/capacityBytes")
+        {
+            self.set_ephemeral_storage_capacity_bytes(ephemeral_storage_capacity_bytes);
+        }
+
+        if let Some(ephemeral_storage_used_bytes) =
+            Self::extract_i64(&json, "/ephemeral-storage/usedBytes")
+        {
+            self.set_ephemeral_storage_used_bytes(ephemeral_storage_used_bytes);
+        }
+
+        if let Some(ephemeral_storage_inodes_free) =
+            Self::extract_i64(&json, "/ephemeral-storage/inodesFree")
+        {
+            self.set_ephemeral_storage_inodes_free(ephemeral_storage_inodes_free);
+        }
+
+        if let Some(ephemeral_storage_inodes) =
+            Self::extract_i64(&json, "/ephemeral-storage/inodes")
+        {
+            self.set_ephemeral_storage_inodes(ephemeral_storage_inodes);
+        }
+
+        if let Some(ephemeral_storage_inodes_used) =
+            Self::extract_i64(&json, "/ephemeral-storage/inodesUsed")
+        {
+            self.set_ephemeral_storage_inodes_used(ephemeral_storage_inodes_used);
+        }
+
+        if let Some(process_count) = Self::extract_i64(&json, "/process_stats/process_count") {
+            self.set_process_count(process_count as i32);
+        }
+
+        if let Some(swap_usage_bytes) = Self::extract_i64(&json, "/swap/swapUsageBytes") {
+            self.set_swap_usage_bytes(swap_usage_bytes);
         }
     }
 
@@ -374,15 +382,52 @@ impl KubernetesMetrics {
             .map(|previous| self.delta(previous.clone()))
     }
 
-    pub fn extract_phase(&mut self, pods: &kube::api::ObjectList<Pod>) {
+    pub fn extract_containers(&mut self, pods: &kube::api::ObjectList<Pod>) {
         if let Some(pod_data) = pods.iter().find(|pod| match &pod.metadata.name {
             Some(name) => name == &self.pod_name,
             _ => false,
         }) {
             if let Some(status) = &pod_data.status {
-                if let Some(phase) = &status.phase {
-                    self.set_phase(phase.to_string());
-                };
+                if let Some(container_statuses) = &status.container_statuses {
+                    let mut proto_containers = protobuf::RepeatedField::new();
+
+                    for container_status in container_statuses {
+                        let mut proto_container = Container::new();
+
+                        // Set container name
+                        proto_container.set_name(container_status.name.clone());
+
+                        // Extract container status, reason, and exit code based on container state
+                        if let Some(ref state) = container_status.state {
+                            if let Some(ref _running) = state.running {
+                                proto_container
+                                    .set_status(ContainerStatus::CONTAINER_STATUS_RUNNING);
+                                // Running state doesn't have reason or exit_code
+                            } else if let Some(ref waiting) = state.waiting {
+                                proto_container
+                                    .set_status(ContainerStatus::CONTAINER_STATUS_WAITING);
+                                if let Some(ref reason) = waiting.reason {
+                                    proto_container.set_reason(reason.clone());
+                                }
+                                // Waiting state doesn't have exit_code
+                            } else if let Some(ref terminated) = state.terminated {
+                                proto_container
+                                    .set_status(ContainerStatus::CONTAINER_STATUS_TERMINATED);
+                                if let Some(ref reason) = terminated.reason {
+                                    proto_container.set_reason(reason.clone());
+                                }
+                                proto_container.set_exit_code(terminated.exit_code);
+                            }
+                        } else {
+                            // If no state is present, default to unknown
+                            proto_container.set_status(ContainerStatus::CONTAINER_STATUS_UNKNOWN);
+                        }
+
+                        proto_containers.push(proto_container);
+                    }
+
+                    self.set_containers(proto_containers);
+                }
             }
         };
     }
@@ -551,7 +596,7 @@ async fn run(
     resolver: &mut OwnershipResolver,
     previous: Vec<KubernetesMetrics>,
 ) -> Result<Vec<KubernetesMetrics>, Error> {
-    trace!("Beginning Kubernetes metrics extraction");
+    info!("Extracting metrics from Kubernetes cluster");
 
     let nodes: Api<Node> = Api::all(client.clone());
     let nodes_list = nodes.list(&ListParams::default()).await?;
@@ -561,6 +606,9 @@ async fn run(
 
     let mut metrics = Vec::new();
     let mut payload = Vec::new();
+
+    // Collect all stats/summary data from all nodes
+    let mut stats_data = std::collections::HashMap::new();
 
     for node in &nodes_list {
         let name = node.name_any();
@@ -573,6 +621,7 @@ async fn run(
 
         trace!("JSON: {:?}", kube_response);
 
+        // Process node metrics
         if let Some(mut node_metric) =
             KubernetesMetrics::from_node_json(kube_response["node"].clone())
         {
@@ -587,35 +636,20 @@ async fn run(
             trace!("Node: {:?}", node_metric);
         };
 
+        // Store stats data for later pod enrichment
         if let Some(pods) = kube_response["pods"].as_array() {
             for pod in pods {
-                if let Some(mut pod_metric) = KubernetesMetrics::from_pod_json(
-                    kube_response["node"]["nodeName"].as_str(),
-                    pod.clone(),
-                ) {
-                    pod_metric.extract_phase(&pods_list);
-                    pod_metric.extract_pod_labels(&pods_list);
-                    pod_metric.extract_pod_restart_count_and_uptime(&pods_list);
-
-                    if let Err(err) = pod_metric
-                        .extract_owner_references(resolver, &pods_list)
-                        .await
-                    {
-                        warn!(
-                            "Failed to extract owner references for pod {}: {}",
-                            pod_metric.pod_name, err
-                        );
+                if let Some(pod_ref) = pod.get("podRef") {
+                    if let Some(pod_uid) = pod_ref.get("uid").and_then(|uid| uid.as_str()) {
+                        stats_data.insert(pod_uid.to_string(), pod.clone());
                     }
+                }
+            }
+        }
 
-                    if let Some(metric) = pod_metric.delta_from(previous.clone()) {
-                        payload.push(metric);
-                    }
-
-                    metrics.push(pod_metric.clone());
-
-                    trace!("Pod: {:?}", pod_metric);
-                };
-
+        // Process volume metrics
+        if let Some(pods) = kube_response["pods"].as_array() {
+            for pod in pods {
                 if let Some(volumes) = pod["volume"].as_array() {
                     for volume in volumes {
                         if let Some(volume_metric) = KubernetesMetrics::from_volume_json(
@@ -633,10 +667,43 @@ async fn run(
                     }
                 }
             }
-        };
+        }
     }
 
-    trace!("Extracted {} metrics", metrics.len());
+    // Process all pods from Kubernetes API
+    for pod in &pods_list {
+        if let Some(mut pod_metric) = KubernetesMetrics::from_pod_api(pod) {
+            // Extract additional metadata from Kubernetes API
+            pod_metric.extract_containers(&pods_list);
+            pod_metric.extract_pod_labels(&pods_list);
+            pod_metric.extract_pod_restart_count_and_uptime(&pods_list);
+
+            if let Err(err) = pod_metric
+                .extract_owner_references(resolver, &pods_list)
+                .await
+            {
+                warn!(
+                    "Failed to extract owner references for pod {}: {}",
+                    pod_metric.pod_name, err
+                );
+            }
+
+            // Enrich with stats data if available
+            if let Some(stats_json) = stats_data.get(&pod_metric.pod_uuid) {
+                pod_metric.enrich_with_stats(stats_json.clone());
+            }
+
+            if let Some(metric) = pod_metric.delta_from(previous.clone()) {
+                payload.push(metric);
+            }
+
+            metrics.push(pod_metric.clone());
+
+            trace!("Pod: {:?}", pod_metric);
+        }
+    }
+
+    info!("Extracted {} metrics", metrics.len());
 
     let config = Config::from_env();
     let base = Url::parse(&config.endpoint).expect("Could not parse endpoint");
@@ -647,20 +714,53 @@ async fn run(
 
     info!("Sending {} metrics to Appsignal", payload.len());
 
-    for metric in &payload {
-        let metric_bytes = metric.write_to_bytes().expect("Could not serialize metric");
-        let appsignal_response = reqwest_client
-            .post(url.clone())
-            .body(metric_bytes)
-            .send()
-            .await?;
+    let mut batch_message = KubernetesMetricsBatch::new();
+    for metric in payload.into_iter() {
+        batch_message.mut_metrics().push(metric);
+        if batch_message.compute_size() > BATCH_SIZE_THRESHOLD {
+            // Remove the metric that went over the threshold from the batch,
+            // unless it is the only metric in the batch.
+            let metric = if batch_message.mut_metrics().len() > 1 {
+                metrics.pop()
+            } else {
+                None
+            };
 
-        trace!("Metric sent: {:?}", appsignal_response);
+            let batch = std::mem::take(&mut batch_message);
+            send_batch(batch, &url, &reqwest_client).await?;
+
+            // Add the metric that went over the threshold to the next batch.
+            if let Some(metric) = metric {
+                batch_message.mut_metrics().push(metric);
+            }
+        }
     }
 
-    trace!("Done sending metrics");
+    if !batch_message.get_metrics().is_empty() {
+        send_batch(batch_message, &url, &reqwest_client).await?;
+    }
+
+    info!("All metrics sent");
 
     Ok(metrics)
+}
+
+async fn send_batch(
+    batch: KubernetesMetricsBatch,
+    url: &Url,
+    client: &Client,
+) -> Result<Response, Error> {
+    let batch_bytes = batch.write_to_bytes().expect("Could not serialize batch");
+
+    let response = client.post(url.clone()).body(batch_bytes).send().await?;
+
+    info!(
+        "Batch of {} metrics sent: {:?}",
+        batch.get_metrics().len(),
+        response.status()
+    );
+
+    Ok(response)
 }
 
 fn now_timestamp() -> i64 {
@@ -883,17 +983,25 @@ mod tests {
     }
 
     #[test]
-    fn extract_pod_metrics_with_empty_results() {
-        assert_eq!(None, KubernetesMetrics::from_pod_json(None, json!([])));
-    }
+    fn enrich_with_stats_from_fixture() {
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
 
-    #[test]
-    fn extract_pod_metrics_with_results() {
-        let metric = KubernetesMetrics::from_pod_json(
-            Some("node"),
-            digitalocean_fixture()["pods"][0].clone(),
-        )
-        .unwrap();
+        // Create a base pod metric
+        let mut pod = Pod::default();
+        pod.metadata.name = Some("konnectivity-agent-8qf4d".to_string());
+        pod.metadata.namespace = Some("kube-system".to_string());
+        pod.metadata.uid = Some("eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4".to_string());
+
+        let pod_spec = PodSpec {
+            node_name: Some("node".to_string()),
+            ..Default::default()
+        };
+        pod.spec = Some(pod_spec);
+
+        let mut metric = KubernetesMetrics::from_pod_api(&pod).unwrap();
+
+        // Enrich with stats from the fixture
+        metric.enrich_with_stats(digitalocean_fixture()["pods"][0].clone());
 
         assert_eq!("node", metric.node_name);
         assert_eq!("konnectivity-agent-8qf4d", metric.pod_name);
@@ -970,9 +1078,8 @@ mod tests {
 
     #[test]
     fn delta_subtracts_network_data() {
-        let metric = KubernetesMetrics::from_node_json(digitalocean_fixture()["node"].clone())
-            .clone()
-            .unwrap();
+        let metric =
+            KubernetesMetrics::from_node_json(digitalocean_fixture()["node"].clone()).unwrap();
 
         let new = metric.delta(metric.clone());
 
@@ -1016,59 +1123,62 @@ mod tests {
 
     #[test]
     fn delta_from_pod() {
-        let node = KubernetesMetrics::from_pod_json(
-            Some("node"),
-            json!({
-                "podRef": {
-                    "name": "pod",
-                    "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
-                },
-                "network": {
-                    "rxBytes": 2732202444_u64,
-                }
-            }),
-        )
-        .unwrap();
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
 
-        let previous = vec![
-            KubernetesMetrics::from_pod_json(
-                Some("node"),
-                json!({
-                    "podRef": {
-                        "name": "pod",
-                        "uid": "differen-tuid-4cbf-9f2d-1ca9e926c7e4",
-                    },
-                    "network": {
-                        "rxBytes": 2732202444_u64,
-                    }
-                }),
-            )
-            .unwrap(),
-            KubernetesMetrics::from_pod_json(
-                Some("node"),
-                json!({
-                    "podRef": {
-                        "name": "pod",
-                        "uid": "eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4",
-                    },
-                    "network": {
-                        "rxBytes": 2732202440_u64,
-                    }
-                }),
-            )
-            .unwrap(),
-        ];
+        // Create current pod metric
+        let mut pod = Pod::default();
+        pod.metadata.name = Some("pod".to_string());
+        pod.metadata.namespace = Some("default".to_string());
+        pod.metadata.uid = Some("eba341db-5f3c-4cbf-9f2d-1ca9e926c7e4".to_string());
 
-        let new = node.delta_from(previous).unwrap();
+        let pod_spec = PodSpec {
+            node_name: Some("node".to_string()),
+            ..Default::default()
+        };
+        pod.spec = Some(pod_spec);
+
+        let mut current = KubernetesMetrics::from_pod_api(&pod).unwrap();
+        current.enrich_with_stats(json!({
+            "network": {
+                "rxBytes": 2732202444_u64,
+            }
+        }));
+
+        // Create previous pod metrics
+        let mut previous_different = current.clone();
+        previous_different.set_pod_uuid("differen-tuid-4cbf-9f2d-1ca9e926c7e4".to_string());
+        previous_different.set_network_rx_bytes(2732202444);
+
+        let mut previous_same = current.clone();
+        previous_same.set_network_rx_bytes(2732202440);
+
+        let previous = vec![previous_different, previous_same];
+
+        let new = current.delta_from(previous).unwrap();
 
         assert_eq!(4, new.network_rx_bytes);
     }
 
     #[test]
-    fn extract_pod_metrics_with_negative_results() {
-        let metric =
-            KubernetesMetrics::from_pod_json(Some("node"), negative_fixture()["pods"][0].clone())
-                .unwrap();
+    fn enrich_with_stats_handles_negative_values() {
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
+
+        // Create a base pod metric
+        let mut pod = Pod::default();
+        pod.metadata.name = Some("test-pod".to_string());
+        pod.metadata.namespace = Some("default".to_string());
+        pod.metadata.uid = Some("test-uid".to_string());
+
+        let pod_spec = PodSpec {
+            node_name: Some("node".to_string()),
+            ..Default::default()
+        };
+        pod.spec = Some(pod_spec);
+
+        let mut metric = KubernetesMetrics::from_pod_api(&pod).unwrap();
+
+        // Enrich with negative fixture data
+        metric.enrich_with_stats(negative_fixture()["pods"][0].clone());
 
         assert_eq!(0, metric.cpu_usage_nano_cores);
         assert_eq!(0, metric.cpu_usage_core_nano_seconds);
@@ -1094,5 +1204,88 @@ mod tests {
         assert_eq!(0, metric.process_count);
 
         assert_eq!(0, metric.swap_usage_bytes);
+    }
+
+    #[test]
+    fn from_pod_api_creates_base_metrics() {
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
+
+        let mut pod = Pod::default();
+        pod.metadata.name = Some("test-pod".to_string());
+        pod.metadata.namespace = Some("default".to_string());
+        pod.metadata.uid = Some("test-uid-123".to_string());
+
+        let pod_spec = PodSpec {
+            node_name: Some("test-node".to_string()),
+            ..Default::default()
+        };
+        pod.spec = Some(pod_spec);
+
+        let pod_status = k8s_openapi::api::core::v1::PodStatus {
+            phase: Some("Running".to_string()),
+            ..Default::default()
+        };
+        pod.status = Some(pod_status);
+
+        let metric = KubernetesMetrics::from_pod_api(&pod).unwrap();
+
+        assert_eq!("test-pod", metric.pod_name);
+        assert_eq!("default", metric.pod_namespace);
+        assert_eq!("test-uid-123", metric.pod_uuid);
+        assert_eq!("test-node", metric.node_name);
+        assert_eq!(
+            crate::protocol::kubernetes::PodPhase::POD_PHASE_RUNNING,
+            metric.pod_phase
+        );
+        assert!(metric.is_pod());
+        assert!(!metric.is_node());
+        assert!(!metric.is_volume());
+
+        // Should have default values for stats-based metrics
+        assert_eq!(0, metric.cpu_usage_nano_cores);
+        assert_eq!(0, metric.memory_usage_bytes);
+        assert_eq!(0, metric.network_rx_bytes);
+    }
+
+    #[test]
+    fn enrich_with_stats_adds_metrics() {
+        use k8s_openapi::api::core::v1::{Pod, PodSpec};
+
+        let mut pod = Pod::default();
+        pod.metadata.name = Some("test-pod".to_string());
+        pod.metadata.namespace = Some("default".to_string());
+        pod.metadata.uid = Some("test-uid-123".to_string());
+
+        let pod_spec = PodSpec {
+            node_name: Some("test-node".to_string()),
+            ..Default::default()
+        };
+        pod.spec = Some(pod_spec);
+
+        let mut metric = KubernetesMetrics::from_pod_api(&pod).unwrap();
+
+        let stats_json = json!({
+            "cpu": {
+                "usageNanoCores": 1000000,
+                "usageCoreNanoSeconds": 2000000000
+            },
+            "memory": {
+                "usageBytes": 1048576,
+                "workingSetBytes": 2097152
+            },
+            "network": {
+                "rxBytes": 1024,
+                "txBytes": 2048
+            }
+        });
+
+        metric.enrich_with_stats(stats_json);
+
+        assert_eq!(1000000, metric.cpu_usage_nano_cores);
+        assert_eq!(2000000000, metric.cpu_usage_core_nano_seconds);
+        assert_eq!(1048576, metric.memory_usage_bytes);
+        assert_eq!(2097152, metric.memory_working_set_bytes);
+        assert_eq!(1024, metric.network_rx_bytes);
+        assert_eq!(2048, metric.network_tx_bytes);
     }
 }
