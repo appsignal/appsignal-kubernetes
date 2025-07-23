@@ -8,10 +8,9 @@ File.write(
   File.read("Cargo.toml").sub(/^version = ".*"$/, %(version = "#{VERSION}"))
 )
 File.write(
-  "deployment.yaml",
-  File.read("deployment.yaml").sub(/image: appsignal\/appsignal-kubernetes:.*$/, "image: appsignal/appsignal-kubernetes:#{VERSION}")
-)
-system("rake update_helm_templates")
-File.write(
   "charts/appsignal-kubernetes/Chart.yaml",
   File.read("charts/appsignal-kubernetes/Chart.yaml").sub(/^version: .*$/, %(version: #{VERSION})))
+File.write(
+  "charts/appsignal-kubernetes/Chart.yaml",
+  File.read("charts/appsignal-kubernetes/Chart.yaml").sub(/^appVersion: .*$/, %(appVersion: "#{VERSION}")))
+system("rake generate_deployment")

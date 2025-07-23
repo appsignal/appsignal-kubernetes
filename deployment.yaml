@@ -1,21 +1,96 @@
+---
+# Source: appsignal-kubernetes/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: appsignal
+  labels:
+    helm.sh/chart: appsignal-kubernetes-1.1.2
+    app.kubernetes.io/name: appsignal-kubernetes
+    app.kubernetes.io/instance: appsignal-kubernetes
+    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: appsignal-kubernetes/templates/deployment.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appsignal-kubernetes
+  namespace: appsignal
+  labels:
+    helm.sh/chart: appsignal-kubernetes-1.1.2
+    app.kubernetes.io/name: appsignal-kubernetes
+    app.kubernetes.io/instance: appsignal-kubernetes
+    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken: true
+---
+# Source: appsignal-kubernetes/templates/deployment.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: appsignal-kubernetes
+  labels:
+    helm.sh/chart: appsignal-kubernetes-1.1.2
+    app.kubernetes.io/name: appsignal-kubernetes
+    app.kubernetes.io/instance: appsignal-kubernetes
+    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs:
+      - get
+      - list
+---
+# Source: appsignal-kubernetes/templates/deployment.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: appsignal-kubernetes
+  labels:
+    helm.sh/chart: appsignal-kubernetes-1.1.2
+    app.kubernetes.io/name: appsignal-kubernetes
+    app.kubernetes.io/instance: appsignal-kubernetes
+    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: appsignal-kubernetes
+subjects:
+  - kind: ServiceAccount
+    name: appsignal-kubernetes
+    namespace: appsignal
+---
+# Source: appsignal-kubernetes/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: appsignal-kubernetes
+  namespace: appsignal
+  labels:
+    helm.sh/chart: appsignal-kubernetes-1.1.2
+    app.kubernetes.io/name: appsignal-kubernetes
+    app.kubernetes.io/instance: appsignal-kubernetes
+    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: appsignal-kubernetes
+      app.kubernetes.io/name: appsignal-kubernetes
+      app.kubernetes.io/instance: appsignal-kubernetes
   template:
     metadata:
       labels:
-        app: appsignal-kubernetes
+        app.kubernetes.io/name: appsignal-kubernetes
+        app.kubernetes.io/instance: appsignal-kubernetes
     spec:
-      serviceAccountName: appsignal-kubernetes-service-account
+      serviceAccountName: appsignal-kubernetes
       containers:
       - name: appsignal-kubernetes
-        image: appsignal/appsignal-kubernetes:1.1.2
+        image: "appsignal/appsignal-kubernetes:1.1.2"
         imagePullPolicy: IfNotPresent
         env:
         - name: APPSIGNAL_API_KEY
@@ -25,32 +100,5 @@ spec:
               key: api-key
         - name: RUST_LOG
           value: info
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: appsignal-kubernetes-service-account
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: appsignal-kubernetes-role
-rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs:
-      - get
-      - list
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: appsignal-kubernetes-cluster-role-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: appsignal-kubernetes-role
-subjects:
-  - kind: ServiceAccount
-    name: appsignal-kubernetes-service-account
-    namespace: default
+        resources:
+            {}

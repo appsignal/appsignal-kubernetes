@@ -1,27 +1,33 @@
 # AppSignal for Kubernetes
 
-Extracts Kubenetes Cluster Metrics.
+AppSignal for Kubernetes is an agent that collects and sends metrics about your Kubernetes cluster to your AppSignal account.
 
 ## Installation
 
-In a Kubernetes cluster, set up your AppSignal API key (find your _App-specific_ API key in [App settings](https://appsignal.com/redirect-to/app?to=info)) by creating a secret:
+First, set up your AppSignal API key (find your _App-specific_ API key in [App settings](https://appsignal.com/redirect-to/app?to=info)) by creating a secret:
 
-    kubectl create secret generic appsignal --from-literal=api-key=00000000-0000-0000-0000-000000000000
+    kubectl create secret generic appsignal --from-literal=api-key=00000000-0000-0000-0000-000000000000 --namespace appsignal
 
-Then, add the AppSignal deployment to your cluster:
+### Using kubectl
+
+Install AppSignal for Kubernetes by applying the deployment manifest:
 
     kubectl apply -f https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/main/deployment.yaml
 
-Alternatively, install AppSignal through its Helm chart:
+This will create the `appsignal` namespace and deploy the AppSignal for Kubernetes agent in that namespace.
+
+### Using Helm
+
+Add the AppSignal Helm repository and install the chart:
 
     helm repo add appsignal-kubernetes https://appsignal.github.io/appsignal-kubernetes
-    helm install appsignal-kubernetes/appsignal-kubernetes --generate-name
-
-AppSignal for Kubernetes will start sending Kubernetes automatically.
+    helm install appsignal-kubernetes appsignal-kubernetes/appsignal-kubernetes --create-namespace --namespace appsignal
 
 ## Cluster Metrics
 
-After installing AppSignal for Kubernetes into a cluster, AppSignal's Host Metrics are automatically replaced with Cluster Metrics to display cluster metrics.
+AppSignal for Kubernetes will start sending Kubernetes metrics automatically.
+
+After installing AppSignal for Kubernetes, AppSignal's Host Metrics are automatically replaced with Cluster Metrics to display cluster metrics.
 
 ## Development
 
