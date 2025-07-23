@@ -5,10 +5,10 @@ kind: Namespace
 metadata:
   name: appsignal
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.1.2
+    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
-    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/version: "1.2.0"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: appsignal-kubernetes/templates/deployment.yaml
@@ -18,10 +18,10 @@ metadata:
   name: appsignal-kubernetes
   namespace: appsignal
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.1.2
+    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
-    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/version: "1.2.0"
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 ---
@@ -31,10 +31,10 @@ kind: ClusterRole
 metadata:
   name: appsignal-kubernetes
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.1.2
+    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
-    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/version: "1.2.0"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups: ["*"]
@@ -49,10 +49,10 @@ kind: ClusterRoleBinding
 metadata:
   name: appsignal-kubernetes
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.1.2
+    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
-    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/version: "1.2.0"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -70,10 +70,10 @@ metadata:
   name: appsignal-kubernetes
   namespace: appsignal
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.1.2
+    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
-    app.kubernetes.io/version: "1.1.2"
+    app.kubernetes.io/version: "1.2.0"
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
@@ -90,7 +90,7 @@ spec:
       serviceAccountName: appsignal-kubernetes
       containers:
       - name: appsignal-kubernetes
-        image: "appsignal/appsignal-kubernetes:1.1.2"
+        image: "appsignal/appsignal-kubernetes:1.2.0"
         imagePullPolicy: IfNotPresent
         env:
         - name: APPSIGNAL_API_KEY

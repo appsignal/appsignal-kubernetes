@@ -1,5 +1,25 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.2.0
+
+_Published on 2025-07-23._
+
+### Added
+
+- Report labels for pods and nodes (patch [f469c3d](https://github.com/appsignal/appsignal-kubernetes/commit/f469c3d851079da57e85ad928dac8767e010df3f))
+- Report pod uptime and restart count (patch [f469c3d](https://github.com/appsignal/appsignal-kubernetes/commit/f469c3d851079da57e85ad928dac8767e010df3f))
+- Report container statuses. This allows for more accurate reporting of error states that are not necessarily reflected in the pod phase, such as when a container is waiting to be restarted after a crash loop. (patch [8fb4993](https://github.com/appsignal/appsignal-kubernetes/commit/8fb4993c434469e615e5557d6bbadff0319d406e))
+- Report top-level owners for pods. When reporting information about a pod to AppSignal, report its top-level owner resources, such as a Deployment or Job. (patch [a3f0e17](https://github.com/appsignal/appsignal-kubernetes/commit/a3f0e1709f86535e43cb4214be6a5335b18169bd))
+
+### Changed
+
+- Report metrics in batches. This should improve performance for clusters with lots of Kubernetes resources. (minor [c7b13ca](https://github.com/appsignal/appsignal-kubernetes/commit/c7b13ca770fb511efd7c376e225a428969ceeac4))
+
+### Fixed
+
+- Report metrics for all pods. Before this fix, metrics for a pod would only be reported if one or more of its containers was currently running. (patch [9ead1c5](https://github.com/appsignal/appsignal-kubernetes/commit/9ead1c5e0b3fde5c4ba9c07e7ab35403053649ad))
+- Fix Helm releases. Helm releases versioned 1.1.2 and below would install version 1.0.0 of the AppSignal Kubernetes integration, which did not include the latest changes. This release ensures that the correct version is installed. (patch [a3f0e17](https://github.com/appsignal/appsignal-kubernetes/commit/a3f0e1709f86535e43cb4214be6a5335b18169bd))
+
 ## 1.1.2
 
 _Published on 2025-05-08._
