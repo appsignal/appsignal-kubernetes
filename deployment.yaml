@@ -1,14 +1,9 @@
 ---
-# Source: appsignal-kubernetes/templates/namespace.yaml
+# Source: appsignal-kubernetes/templates/deployment.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: appsignal
-  labels:
-    helm.sh/chart: appsignal-kubernetes-1.2.0
-    app.kubernetes.io/name: appsignal-kubernetes
-    app.kubernetes.io/instance: appsignal-kubernetes
-    app.kubernetes.io/version: "1.2.0"
 ---
 # Source: appsignal-kubernetes/templates/deployment.yaml
 apiVersion: v1
@@ -17,7 +12,6 @@ metadata:
   name: appsignal-kubernetes
   namespace: appsignal
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
@@ -29,7 +23,6 @@ kind: ClusterRole
 metadata:
   name: appsignal-kubernetes
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
@@ -46,7 +39,6 @@ kind: ClusterRoleBinding
 metadata:
   name: appsignal-kubernetes
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"
@@ -66,7 +58,6 @@ metadata:
   name: appsignal-kubernetes
   namespace: appsignal
   labels:
-    helm.sh/chart: appsignal-kubernetes-1.2.0
     app.kubernetes.io/name: appsignal-kubernetes
     app.kubernetes.io/instance: appsignal-kubernetes
     app.kubernetes.io/version: "1.2.0"

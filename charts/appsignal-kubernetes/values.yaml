@@ -31,8 +31,8 @@ appsignal:
 # Log level for the application
 logLevel: "info"
 
-# Whether resources should be described as managed by Helm
-managed: true
+# Whether this is a kubectl-oriented deployment (adds namespace, removes Helm labels)
+kubectl: false
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

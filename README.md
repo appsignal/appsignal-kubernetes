@@ -1,6 +1,6 @@
 # AppSignal for Kubernetes
 
-AppSignal for Kubernetes is an agent that collects and sends metrics about your Kubernetes cluster to your AppSignal account.
+AppSignal for Kubernetes collects and sends metrics about your Kubernetes cluster to your AppSignal account.
 
 ## Installation
 
@@ -14,7 +14,7 @@ Install AppSignal for Kubernetes by applying the deployment manifest:
 
     kubectl apply -f https://raw.githubusercontent.com/appsignal/appsignal-kubernetes/main/deployment.yaml
 
-This will create the `appsignal` namespace and deploy the AppSignal for Kubernetes agent in that namespace.
+This will create the `appsignal` namespace and deploy AppSignal for Kubernetes in that namespace.
 
 ### Using Helm
 
