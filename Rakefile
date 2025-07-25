@@ -139,7 +139,7 @@ task :generate_deployment do
   
   # Create a temporary values file with only the overrides needed for standalone deployment
   values_override = <<~VALUES
-    managed: false
+    kubectl: true
     image:
       tag: "#{current_version}"
   VALUES

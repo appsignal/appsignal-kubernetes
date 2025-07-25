@@ -34,12 +34,14 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "appsignal-kubernetes.labels" -}}
+{{- if not .Values.kubectl }}
 helm.sh/chart: {{ include "appsignal-kubernetes.chart" . }}
-{{ include "appsignal-kubernetes.selectorLabels" . }}
+{{- end }}
+{{- include "appsignal-kubernetes.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
-{{- if .Values.managed }}
+{{- if not .Values.kubectl }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 {{- end }}
@@ -62,7 +64,14 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
+{{- if .Values.kubectl }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+{{- end }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
