@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.2.2
+
+_Published on 2025-07-29._
+
+### Fixed
+
+- Fix Helm chart version. Ensure the default value for the AppSignal for Kubernetes version to install for a given Helm chart release matches the AppSignal for Kubernetes version being released. (patch [1645706](https://github.com/appsignal/appsignal-kubernetes/commit/164570616bd6b1e9ff2909067d33073da2117688))
+
 ## 1.2.1
 
 _Published on 2025-07-29._
