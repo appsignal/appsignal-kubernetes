@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.2.1
+
+_Published on 2025-07-29._
+
+### Fixed
+
+- Fix Helm chart namespace creation. The chart mistakenly contained its own `appsignal` namespace resource, which interfered with the use of Helm's `--namespace` and `--create-namespace` flags. The chart now correctly uses the namespace specified by the user without creating an additional one. (patch [7a163b1](https://github.com/appsignal/appsignal-kubernetes/commit/7a163b1b02e371971b7ddc9b7361f46dde73595b))
+
 ## 1.2.0
 
 _Published on 2025-07-23._
