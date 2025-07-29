@@ -34,9 +34,9 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "appsignal-kubernetes.labels" -}}
-{{- if not .Values.kubectl }}
+{{- if not .Values.kubectl -}}
 helm.sh/chart: {{ include "appsignal-kubernetes.chart" . }}
-{{- end }}
+{{ end }}
 {{- include "appsignal-kubernetes.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
@@ -105,7 +105,7 @@ spec:
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
 ---
-{{- if .Values.serviceAccount.create -}}
+{{ if .Values.serviceAccount.create -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
