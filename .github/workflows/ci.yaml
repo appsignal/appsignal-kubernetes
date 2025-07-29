@@ -30,6 +30,13 @@ jobs:
       - run: cargo clippy --verbose --tests --all-targets --all-features -- -D warnings
       - run: cargo fmt --check --verbose
       - run: cargo test --verbose
+      - name: "Install Helm"
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+      - run: rake helm:lint
+      - run: rake helm:test
+      - run: rake helm:deployment:check
 
   build_release:
     name: "Build every target"

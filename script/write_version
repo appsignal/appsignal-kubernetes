@@ -13,4 +13,4 @@ File.write(
 File.write(
   "charts/appsignal-kubernetes/Chart.yaml",
   File.read("charts/appsignal-kubernetes/Chart.yaml").sub(/^appVersion: .*$/, %(appVersion: "#{VERSION}")))
-system("rake generate_deployment")
+system("rake helm:deployment")

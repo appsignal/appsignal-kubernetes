@@ -133,28 +133,39 @@ task :protocol do
   `protoc -I ../appsignal-protocol --rust_out=protocol ../appsignal-protocol/kubernetes.proto`
 end
 
-desc "Generate deployment.yaml from Helm chart"
-task :generate_deployment do
-  require 'tempfile'
-  
-  # Create a temporary values file with only the overrides needed for standalone deployment
-  values_override = <<~VALUES
-    kubectl: true
-    image:
-      tag: "#{current_version}"
-  VALUES
-  
-  # Write temporary override values file
-  Tempfile.create(['values-override', '.yaml']) do |override_file|
-    override_file.write(values_override)
-    override_file.flush
-    
-    # Generate deployment.yaml using helm template with existing values.yaml plus overrides
-    output = `helm template appsignal-kubernetes charts/appsignal-kubernetes --values charts/appsignal-kubernetes/values.yaml --values #{override_file.path} --namespace appsignal`
-    
+
+namespace :helm do
+  desc "Generate deployment.yaml for kubectl from Helm chart"
+  task :deployment do
+    command = "helm template appsignal-kubernetes charts/appsignal-kubernetes" \
+      " --set kubectl=true" \
+      " --namespace appsignal"
+    output = Command.run(command, :output => false)
     # Write the output to deployment.yaml
     File.write('deployment.yaml', output)
     puts "Generated deployment.yaml from Helm chart"
+  end
+
+  desc "Lint the Helm chart"
+  task :lint do
+    Command.run("helm lint charts/appsignal-kubernetes --debug")
+  end
+
+  desc "Check that the Helm chart can be used to build templates"
+  task :test do
+    output = Command.run("helm template appsignal-kubernetes charts/appsignal-kubernetes", :output => false)
+    raise "Regular output should not include namespace" if output.include?("kind: Namespace")
+    output = Command.run("helm template appsignal-kubernetes charts/appsignal-kubernetes --set kubectl=true", :output => false)
+    raise "Kubectl output should include namespace" unless output.include?("kind: Namespace")
+  end
+
+  namespace :deployment do
+    desc "Check that the `deployment.yaml` file has been generated"
+    task :check do
+      Command.run("rake helm:deployment")
+      raise "deployment.yaml file does not exist" unless File.exist?("deployment.yaml")
+      Command.run("git diff --exit-code deployment.yaml")
+    end
   end
 end
 
