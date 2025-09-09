@@ -3,6 +3,4 @@ bump: patch
 type: add
 ---
 
-Show helpful error message for incorrect API key usage.
-
-When users encounter unauthorized errors, it will be easy for them to know they are using the wrong key.
+When a request to AppSignal returns a `401 Unauthorized` error status code, display a log message asking the customer to ensure they're using an app-level push API key.
