@@ -754,11 +754,27 @@ async fn send_batch(
 
     let response = client.post(url.clone()).body(batch_bytes).send().await?;
 
-    info!(
-        "Batch of {} metrics sent: {:?}",
-        batch.get_metrics().len(),
-        response.status()
-    );
+    let status = response.status();
+
+    if status.is_success() {
+        info!(
+            "Batch of {} metrics sent successfully (HTTP response status: {})",
+            batch.get_metrics().len(),
+            status
+        );
+    } else if status == 401 {
+        warn!(
+            "Batch of {} metrics failed to send (HTTP response status: {}) - make sure you're using an *app-level* push API key",
+            batch.get_metrics().len(),
+            status
+        );
+    } else {
+        warn!(
+            "Batch of {} metrics failed to send (HTTP response status: {})",
+            batch.get_metrics().len(),
+            status
+        );
+    }
 
     Ok(response)
 }
