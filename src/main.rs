@@ -758,24 +758,21 @@ async fn send_batch(
 
     if status.is_success() {
         info!(
-            "Batch of {} metrics sent successfully (HTTP response status: {} {})",
+            "Batch of {} metrics sent successfully (HTTP response status: {})",
             batch.get_metrics().len(),
-            status,
-            status.canonical_reason().unwrap_or("Unknown")
+            status
         );
     } else if status == 401 {
         warn!(
-            "Batch of {} metrics failed to send (HTTP response status: {} {}) - make sure you're using an *app-level* push API key",
+            "Batch of {} metrics failed to send (HTTP response status: {}) - make sure you're using an *app-level* push API key",
             batch.get_metrics().len(),
-            status,
-            status.canonical_reason().unwrap_or("Unknown")
+            status
         );
     } else {
         warn!(
-            "Batch of {} metrics failed to send (HTTP response status: {} {})",
+            "Batch of {} metrics failed to send (HTTP response status: {})",
             batch.get_metrics().len(),
-            status,
-            status.canonical_reason().unwrap_or("Unknown")
+            status
         );
     }
 
