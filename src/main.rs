@@ -756,19 +756,26 @@ async fn send_batch(
 
     let status = response.status();
 
-    trace!("HTTP response status: {}", status);
-
-    if status == 401 {
-        warn!(
-            "Batch of {} metrics failed to send: {:?} - Make sure you're using an app-level key",
+    if status.is_success() {
+        info!(
+            "Batch of {} metrics sent successfully (HTTP response status: {} {})",
             batch.get_metrics().len(),
-            status
+            status,
+            status.canonical_reason().unwrap_or("Unknown")
+        );
+    } else if status == 401 {
+        warn!(
+            "Batch of {} metrics failed to send (HTTP response status: {} {}) - make sure you're using an *app-level* push API key",
+            batch.get_metrics().len(),
+            status,
+            status.canonical_reason().unwrap_or("Unknown")
         );
     } else {
-        info!(
-            "Batch of {} metrics sent: {:?}",
+        warn!(
+            "Batch of {} metrics failed to send (HTTP response status: {} {})",
             batch.get_metrics().len(),
-            status
+            status,
+            status.canonical_reason().unwrap_or("Unknown")
         );
     }
 
