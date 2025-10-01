@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.2.3
+
+_Published on 2025-10-01._
+
+### Added
+
+- When a request to AppSignal returns a `401 Unauthorized` error status code, display a log message asking the customer to ensure they're using an app-level push API key. (patch [0a94e50](https://github.com/appsignal/appsignal-kubernetes/commit/0a94e502b800f98a74b30756c1bed6b36ada9bcf), [ee37723](https://github.com/appsignal/appsignal-kubernetes/commit/ee377235cdc18ca6deadd6be360d1a50f456dd5a))
+
 ## 1.2.2
 
 _Published on 2025-07-29._
