@@ -2,13 +2,13 @@ mod ownership;
 
 extern crate time;
 
-use appsignal_transmitter::reqwest::{Client, Response, Url};
 use http::Request;
 use k8s_openapi::api::core::v1::{Node, Pod};
 use kube::api::ListParams;
 use kube::{Api, ResourceExt};
 use log::{info, trace, warn};
 use protobuf::Message;
+use reqwest::{Client, Response, Url};
 use std::env;
 use std::time::Duration;
 
