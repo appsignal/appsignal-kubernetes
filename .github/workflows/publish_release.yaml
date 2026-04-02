@@ -10,8 +10,12 @@ env:
   PUBLISH_GIT_SIGN_KEY_PATH: "/home/runner/.ssh/sign_key"
 
 jobs:
+  validate-changesets:
+    uses: ./.github/workflows/validate_changesets.yaml
+
   publish:
     name: "Publish the release"
+    needs: [validate-changesets]
     runs-on: ubuntu-22.04
     steps:
       - name: "Checkout the project"
