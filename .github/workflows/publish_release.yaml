@@ -87,6 +87,35 @@ jobs:
         env:
           GH_TOKEN: ${{github.token}}
 
+      - name: "Submit changelog entry"
+        run: |
+          awk -v heading="## $RELEASE_VERSION" \
+            '$0 == heading { found = 1; next } found && /^## / { exit } found { print }' \
+            CHANGELOG.md \
+            | grep -v '^_Published on ' \
+            | sed -E -e 's/^### /## /' -e 's/ \((patch|minor|major) (\[[^]]*\]\([^)]*\)(, )?)+\)$//' \
+            | sed '/./,$!d' \
+            | cat -s \
+            > CHANGELOG_TEXT.txt
+          echo "View the [Kubernetes v$RELEASE_VERSION changelog](https://github.com/appsignal/appsignal-kubernetes/blob/main/CHANGELOG.md#$(echo "$RELEASE_VERSION" | tr -d .)) for more information." >> CHANGELOG_TEXT.txt
+
+          payload=$(jq -n \
+            --arg title "Kubernetes v$RELEASE_VERSION" \
+            --arg category "Kubernetes" \
+            --arg version "$RELEASE_VERSION" \
+            --arg changelog "$(cat CHANGELOG_TEXT.txt)" \
+            --arg assignee "${{github.actor}}" \
+            '{ref: "main", inputs: {title: $title, category: $category, version: $version, changelog: $changelog, assignee: $assignee}}')
+
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.INTEGRATIONS_CHANGELOG_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            --fail-with-body \
+            https://api.github.com/repos/appsignal/appsignal-web/actions/workflows/create_integrations_changelog_entry.yml/dispatches \
+            -d "$payload"
+        env:
+          RELEASE_VERSION: ${{steps.version.outputs.RELEASE_VERSION}}
+
       # The Helm chart releaser needs the Git remote to be a HTTPS URL.
       # We check out the repository with SSH using a deploy key at the start of the workflow,
       # because any other workflows that depend on `push` events to trigger them
