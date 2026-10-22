@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.2.4
+
+_Published on 2026-10-22._
+
+### Security
+
+- Stop trusting certificates issued under the eMudhra intermediate certificate authorities whose private keys were [compromised in October 2026](https://bugzilla.mozilla.org/show_bug.cgi?id=2083449). The bundled CA certificates no longer include the emSign ECC Root CA - G3 and AAA Certificate Services root certificates, which those intermediates chain to. (patch [98b9a11](https://github.com/appsignal/appsignal-kubernetes/commit/98b9a11e7ba6f70848da80a393e16662cb021233))
+
 ## 1.2.3
 
 _Published on 2025-10-01._
