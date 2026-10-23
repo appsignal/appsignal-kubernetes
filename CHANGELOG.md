@@ -1,5 +1,13 @@
 # AppSignal for Kubernetes Changelog
 
+## 1.2.5
+
+_Published on 2026-10-23._
+
+### Security
+
+- Reject certificates issued under the eMudhra intermediate certificate authorities whose private keys were [compromised in October 2026](https://bugzilla.mozilla.org/show_bug.cgi?id=2083449), in addition to no longer trusting the root certificates they chain to. (patch [12e917d](https://github.com/appsignal/appsignal-kubernetes/commit/12e917dbe4aed3b8e56f42188941b1c9be23f41c))
+
 ## 1.2.4
 
 _Published on 2026-10-22._
