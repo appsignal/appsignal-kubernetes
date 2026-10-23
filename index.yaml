@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   appsignal-kubernetes:
   - apiVersion: v2
+    appVersion: 1.2.5
+    created: "2026-10-23T09:31:50.506681436Z"
+    description: A Helm chart for AppSignal Kubernetes monitoring
+    digest: a53ff6d9ed97e99979f597b25ad5ff30c27c5bc64df10d76d35ffa236a9dd6fa
+    name: appsignal-kubernetes
+    type: application
+    urls:
+    - https://github.com/appsignal/appsignal-kubernetes/releases/download/appsignal-kubernetes-1.2.5/appsignal-kubernetes-1.2.5.tgz
+    version: 1.2.5
+  - apiVersion: v2
     appVersion: 1.2.4
     created: "2026-10-22T09:39:57.332819382Z"
     description: A Helm chart for AppSignal Kubernetes monitoring
@@ -69,4 +79,4 @@ entries:
     urls:
     - https://github.com/appsignal/appsignal-kubernetes/releases/download/appsignal-kubernetes-1.1.1/appsignal-kubernetes-1.1.1.tgz
     version: 1.1.1
-generated: "2026-10-22T09:39:57.332851953Z"
+generated: "2026-10-23T09:31:50.506711362Z"
